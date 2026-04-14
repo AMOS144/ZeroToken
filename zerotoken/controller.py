@@ -9,11 +9,10 @@ import base64
 import json
 from datetime import datetime
 from typing import Optional, Any, Dict, List, Literal, Callable
-from playwright.async_api import async_playwright, Browser, BrowserContext, Page, ElementHandle
-from io import BytesIO
+from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 
 from .selector import SmartSelectorGenerator, SmartSelector
-from .wait_strategy import SmartWait, WaitConfig, WaitCondition
+from .wait_strategy import SmartWait, WaitConfig
 from .recovery import ErrorRecovery, RetryWrapper
 from .adaptive import extract_fingerprint, relocate, _domain_from_url
 from .storage import AdaptiveStore

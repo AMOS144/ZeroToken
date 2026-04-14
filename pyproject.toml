@@ -26,6 +26,9 @@ test = [
 ]
 
 [dependency-groups]
+dev = [
+    "ruff>=0.15.10",
+]
 test = [
     "pytest>=7.0",
     "pytest-asyncio>=0.23",

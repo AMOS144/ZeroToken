@@ -216,7 +216,7 @@ class ErrorRecovery:
                         return RecoveryResult(
                             success=True,
                             recovered=True,
-                            action_taken=f"Found element in iframe",
+                            action_taken="Found element in iframe",
                             new_selector=selector
                         )
                     except:

@@ -5,7 +5,7 @@ Wait Strategy - 智能等待策略
 
 import asyncio
 import json
-from typing import Optional, Dict, Any, List, Callable, Awaitable
+from typing import Optional, Dict, Any, List, Callable
 from enum import Enum
 from dataclasses import dataclass
 import time
