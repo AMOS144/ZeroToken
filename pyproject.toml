@@ -15,6 +15,7 @@ dependencies = [
     "apscheduler>=3.10.4",
     "mcp[cli]>=1.0.0",
     "build>=1.4.0",
+    "pillow>=12.2.0",
 ]
 
 [project.optional-dependencies]
