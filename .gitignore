@@ -66,3 +66,4 @@ logs/
 .benchmarks/
 .cache/
 docs/
+.worktrees/
