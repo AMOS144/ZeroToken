@@ -375,7 +375,6 @@ async def _dispatch_action(
     name: str, args: dict[str, Any], svc: Any,
 ) -> Any:
     """按工具名调用 BrowserService 对应方法，返回 OperationRecord 或 None"""
-    # 提取自适应定位公共参数
     adaptive_kw = {
         "auto_save": args.pop("auto_save", False),
         "adaptive": args.pop("adaptive", False),
@@ -383,12 +382,22 @@ async def _dispatch_action(
     }
     take_ss = {"take_screenshot": args.get("include_screenshot", True)}
 
+    # -- 导航 --
     if name == "browser_open":
         return await svc.open(
             args["url"],
             wait_until=args.get("wait_until", "networkidle"),
             **take_ss,
         )
+    if name == "browser_wait_for":
+        return await svc.wait_for(
+            args["condition"],
+            args.get("value"),
+            timeout=args.get("timeout", 30000),
+            **take_ss,
+        )
+
+    # -- 鼠标交互 --
     if name == "browser_click":
         return await svc.click(
             args["selector"],
@@ -396,6 +405,23 @@ async def _dispatch_action(
             wait_after=args.get("wait_after", 0.5),
             **adaptive_kw, **take_ss,
         )
+    if name == "browser_hover":
+        return await svc.hover(args["selector"], **adaptive_kw, **take_ss)
+    if name == "browser_right_click":
+        return await svc.right_click(args["selector"], **adaptive_kw, **take_ss)
+    if name == "browser_double_click":
+        return await svc.double_click(args["selector"], **adaptive_kw, **take_ss)
+    if name == "browser_drag_drop":
+        return await svc.drag_drop(args["source"], args["target"], **take_ss)
+    if name == "browser_scroll":
+        return await svc.scroll(
+            direction=args.get("direction", "down"),
+            amount=args.get("amount", 300),
+            selector=args.get("selector"),
+            **take_ss,
+        )
+
+    # -- 键盘输入 --
     if name == "browser_input":
         return await svc.input(
             args["selector"], args["text"],
@@ -403,6 +429,16 @@ async def _dispatch_action(
             clear_first=args.get("clear_first", True),
             **adaptive_kw, **take_ss,
         )
+    if name == "browser_keyboard":
+        return await svc.keyboard(args["key"], **take_ss)
+    if name == "browser_type_text":
+        return await svc.type_text(
+            args["text"],
+            delay=args.get("delay", 50),
+            **take_ss,
+        )
+
+    # -- 数据提取 --
     if name == "browser_get_text":
         return await svc.get_text(
             args["selector"],
@@ -420,19 +456,38 @@ async def _dispatch_action(
             full_page=args.get("full_page", False),
             selector=args.get("selector"),
         )
-    if name == "browser_wait_for":
-        return await svc.wait_for(
-            args["condition"],
-            args.get("value"),
-            timeout=args.get("timeout", 30000),
-            **take_ss,
-        )
     if name == "browser_extract_data":
         return await svc.extract_data(args["schema"], **take_ss)
+    if name == "browser_evaluate":
+        return await svc.evaluate(args["expression"], **take_ss)
 
-    # -- 扩展操作：尚未在 BrowserService 中实现的动作走通用 pipeline --
-    # 当 BrowserService 增加对应方法后可逐步替换
-    method = getattr(svc, name.removeprefix("browser_"), None)
-    if method is not None:
-        return await method(**args, **adaptive_kw)
+    # -- Tab 管理 --
+    if name == "browser_new_tab":
+        return await svc.new_tab(url=args.get("url"))
+    if name == "browser_switch_tab":
+        return await svc.switch_tab(args["index"])
+    if name == "browser_close_tab":
+        return await svc.close_tab(args.get("index"))
+    if name == "browser_list_tabs":
+        return await svc.list_tabs()
+
+    # -- iframe --
+    if name == "browser_enter_iframe":
+        return await svc.enter_iframe(args["selector"])
+    if name == "browser_exit_iframe":
+        return await svc.exit_iframe()
+
+    # -- 文件操作 --
+    if name == "browser_upload":
+        return await svc.upload(
+            args["selector"], args["path"],
+            **adaptive_kw, **take_ss,
+        )
+    if name == "browser_download":
+        return await svc.download(
+            args["selector"],
+            save_dir=args.get("save_dir"),
+            **take_ss,
+        )
+
     return None
