@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zerotoken"
-version = "0.3.0"
+version = "2.0.0"
 description = "ZeroToken - Record once, automate forever. A lightweight MCP for agent-driven browser automation."
 readme = "README.md"
 license = "MIT"
@@ -40,7 +40,7 @@ Homepage = "https://github.com/AMOS144/zerotoken"
 Repository = "https://github.com/AMOS144/zerotoken"
 
 [tool.setuptools.packages.find]
-include = ["zerotoken*"]
+include = ["zerotoken*", "handlers*"]
 
 [tool.setuptools]
 py-modules = ["mcp_server", "mcp_server_http"]
