@@ -73,3 +73,10 @@ async def extract_data_action(frame: Any, element: Any, params: dict[str, Any]) 
             extracted[name] = None
             extracted[f"{name}_error"] = str(e)
     return {"data": extracted, "schema": schema}
+
+
+async def evaluate_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
+    """在页面上下文执行 JavaScript 表达式（params 可含 return_value，当前与 Playwright evaluate 行为一致）"""
+    expression = params.get("expression", "")
+    value = await frame.evaluate(expression)
+    return {"value": value}
