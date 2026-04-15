@@ -64,6 +64,7 @@ Thumbs.db
 logs/
 *.log
 .benchmarks/
+benchmarks/
 .cache/
 docs/
 .worktrees/
