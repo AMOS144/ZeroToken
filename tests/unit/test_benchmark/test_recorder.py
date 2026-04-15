@@ -169,3 +169,21 @@ def test_recorder_exception_does_not_propagate(monkeypatch):
     rec = BenchmarkRecorder(output_dir="/nonexistent/path/that/should/fail")
     # 不应抛出异常
     rec.record("browser_click", {}, None, 10.0, None)
+
+
+def test_force_enable_overrides_env(monkeypatch):
+    """force_enable=True 时即使未设置环境变量也应启用"""
+    monkeypatch.delenv("ZEROTOKEN_BENCHMARK", raising=False)
+    from zerotoken.benchmark.recorder import BenchmarkRecorder
+
+    rec = BenchmarkRecorder(output_dir=tempfile.mkdtemp(), force_enable=True)
+    assert rec.enabled is True
+
+
+def test_force_enable_false_respects_env(monkeypatch):
+    """force_enable=False（默认）时仍通过环境变量控制"""
+    monkeypatch.delenv("ZEROTOKEN_BENCHMARK", raising=False)
+    from zerotoken.benchmark.recorder import BenchmarkRecorder
+
+    rec = BenchmarkRecorder(output_dir=tempfile.mkdtemp(), force_enable=False)
+    assert rec.enabled is False

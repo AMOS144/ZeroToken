@@ -18,10 +18,13 @@ from typing import IO, Any
 class BenchmarkRecorder:
     """MCP 工具调用的 JSONL 记录器"""
 
-    def __init__(self, output_dir: str = "benchmarks"):
+    def __init__(self, output_dir: str = "benchmarks", force_enable: bool = False):
         self._output_dir = output_dir
-        env_val = os.environ.get("ZEROTOKEN_BENCHMARK", "").strip().lower()
-        self.enabled = env_val in ("1", "true")
+        if force_enable:
+            self.enabled = True
+        else:
+            env_val = os.environ.get("ZEROTOKEN_BENCHMARK", "").strip().lower()
+            self.enabled = env_val in ("1", "true")
         self.session_id = self._make_session_id()
         self._seq = 0
         self._lock = threading.Lock()
