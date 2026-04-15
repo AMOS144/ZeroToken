@@ -151,6 +151,8 @@ async def handle_script_tool(
     name: str,
     args: dict[str, Any],
     script_svc: Any,
+    *,
+    browser_svc: Any = None,
 ) -> list[TextContent]:
     """脚本工具分发"""
     try:
@@ -222,12 +224,28 @@ async def handle_script_tool(
             session_id = args.get("session_id")
             if bool(task_id) == bool(session_id):
                 return _err("Provide exactly one of task_id or session_id", code="INVALID_PARAMS")
+            if browser_svc is None:
+                return _err("Browser not initialized", code="BROWSER_NOT_READY")
             if task_id:
-                return _resp({"success": True, "message": "script_run start not yet wired", "task_id": task_id})
-            return _resp({"success": True, "message": "script_run resume not yet wired", "session_id": session_id})
+                result = await script_svc.run_script(
+                    task_id, browser_svc, vars=args.get("vars") or {},
+                )
+                return _resp(result)
+            else:
+                from zerotoken.models.session import Resolution
+                resolution = Resolution(**(args.get("resolution") or {"type": "retry"}))
+                result = await script_svc.resume_script(session_id, resolution, browser_svc)
+                return _resp(result)
 
         if name == "script_resume":
-            return _resp({"success": True, "message": "script_resume not yet wired", "session_id": args["session_id"]})
+            if browser_svc is None:
+                return _err("Browser not initialized", code="BROWSER_NOT_READY")
+            from zerotoken.models.session import Resolution
+            resolution = Resolution(**args["resolution"])
+            result = await script_svc.resume_script(
+                args["session_id"], resolution, browser_svc,
+            )
+            return _resp(result)
 
         return _err(f"Unknown script tool: {name}", code="UNKNOWN_TOOL")
 

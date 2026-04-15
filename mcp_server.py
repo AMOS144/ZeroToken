@@ -57,7 +57,7 @@ async def call_tool(name: str, arguments: dict):
     elif name.startswith("trajectory_"):
         return await handle_trajectory_tool(name, arguments, _trajectory_svc)
     else:
-        return await handle_script_tool(name, arguments, _script_svc)
+        return await handle_script_tool(name, arguments, _script_svc, browser_svc=_browser_svc)
 
 
 async def main():

@@ -1,7 +1,11 @@
-"""脚本服务：脚本管理/执行/绑定（基础版，无 v2 引擎）"""
+"""脚本服务：脚本管理/执行/绑定（含 ScriptEngineV2 执行与恢复）"""
 from __future__ import annotations
 
 from typing import Any
+
+from zerotoken.engine.script_engine_v2 import ScriptEngineV2
+from zerotoken.models.script import Script, ScriptStep
+from zerotoken.models.session import Resolution
 
 
 class ScriptService:
@@ -59,3 +63,54 @@ class ScriptService:
 
     def session_get(self, session_id: str) -> list[dict[str, Any]]:
         return self._sessions.session_get(session_id)
+
+    async def run_script(
+        self, task_id: str, browser_svc: Any,
+        *, vars: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """启动脚本执行"""
+        raw = self._scripts.script_load(task_id)
+        if raw is None:
+            return {"status": "error", "error": f"Script not found: {task_id}"}
+        script = Script(
+            task_id=raw["task_id"],
+            goal=raw.get("goal", ""),
+            steps=[ScriptStep(**s) for s in raw.get("steps", [])],
+            params_schema=raw.get("params_schema", {}),
+        )
+        engine = ScriptEngineV2(browser_svc, self._sessions, self._runtime)
+        return await engine.run(script, vars=vars)
+
+    async def resume_script(
+        self, session_id: str, resolution: Resolution,
+        browser_svc: Any,
+    ) -> dict[str, Any]:
+        """恢复暂停的脚本"""
+        state = self._runtime.runtime_get(session_id)
+        if state is None:
+            return {"status": "error", "error": f"No session: {session_id}"}
+        task_id = state.get("task_id", "")
+        raw = self._scripts.script_load(task_id)
+        if raw is None:
+            return {"status": "error", "error": f"Script not found: {task_id}"}
+        script = Script(
+            task_id=raw["task_id"],
+            goal=raw.get("goal", ""),
+            steps=[ScriptStep(**s) for s in raw.get("steps", [])],
+        )
+        engine = ScriptEngineV2(browser_svc, self._sessions, self._runtime)
+        return await engine.resume(session_id, script, resolution)
+
+    async def run_script_by_binding(
+        self, binding_key: str, browser_svc: Any,
+        *, vars: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """按绑定 key 执行脚本（合并 default_vars + 传入 vars）"""
+        binding = self._bindings.binding_get(binding_key)
+        if binding is None:
+            return {"status": "error", "error": f"Binding not found: {binding_key}"}
+        task_id = binding["script_task_id"]
+        merged_vars = dict(binding.get("default_vars") or {})
+        if vars:
+            merged_vars.update(vars)
+        return await self.run_script(task_id, browser_svc, vars=merged_vars)
