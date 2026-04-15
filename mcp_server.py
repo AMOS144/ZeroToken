@@ -28,7 +28,7 @@ _benchmark_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bench
 _recorder = BenchmarkRecorder(output_dir=_benchmark_dir)
 
 
-def _init_services():
+def init_services():
     global _db_conn, _browser_svc, _trajectory_svc, _script_svc
     if _db_conn is not None:
         return
@@ -49,13 +49,18 @@ def _init_services():
     )
 
 
+def get_recorder() -> BenchmarkRecorder:
+    """返回模块级 BenchmarkRecorder 实例"""
+    return _recorder
+
+
 @server.list_tools()
 async def list_tools():
     return browser_tools() + trajectory_tools() + script_tools()
 
 
-async def _dispatch(name: str, arguments: dict):
-    """工具分发（从 call_tool 提取，供 benchmark 包装）"""
+async def dispatch(name: str, arguments: dict):
+    """工具分发（经 handler -> service -> pipeline 完整路径）"""
     if name.startswith("browser_"):
         return await handle_browser_tool(name, arguments, _browser_svc, _trajectory_svc)
     elif name.startswith("trajectory_"):
@@ -66,12 +71,12 @@ async def _dispatch(name: str, arguments: dict):
 
 @server.call_tool()
 async def call_tool(name: str, arguments: dict):
-    _init_services()
+    init_services()
     start = time.monotonic()
     result = None
     error = None
     try:
-        result = await _dispatch(name, arguments)
+        result = await dispatch(name, arguments)
         return result
     except Exception as e:
         error = e
