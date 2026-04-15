@@ -157,3 +157,74 @@ class TestValidateAll:
         analyzer.load()
         result = analyzer.validate_all()
         assert all(len(v) == 0 for v in result.values())
+
+
+class TestSummary:
+    def test_basic_summary(self, tmp_path):
+        from zerotoken.benchmark.analyzer import BenchmarkAnalyzer
+
+        path = str(tmp_path / "sum.jsonl")
+        records = [
+            _make_record(1, tool_name="browser_open", duration_ms=1000.0),
+            _make_record(2, tool_name="browser_click", duration_ms=200.0),
+            _make_record(3, tool_name="browser_click", duration_ms=300.0),
+            _make_record(
+                4,
+                tool_name="browser_close",
+                duration_ms=50.0,
+                success=False,
+                error="fail",
+            ),
+        ]
+        _write_jsonl(records, path)
+        analyzer = BenchmarkAnalyzer(path)
+        analyzer.load()
+        s = analyzer.summary()
+        assert s["total_calls"] == 4
+        assert s["success_count"] == 3
+        assert s["fail_count"] == 1
+        assert 0.74 < s["success_rate"] < 0.76
+        assert s["total_duration_ms"] == 1550.0
+        assert "browser_click" in s["by_tool"]
+        assert s["by_tool"]["browser_click"]["count"] == 2
+        assert s["by_tool"]["browser_click"]["avg_duration_ms"] == 250.0
+        assert len(s["errors"]) == 1
+
+    def test_empty_summary(self, tmp_path):
+        from zerotoken.benchmark.analyzer import BenchmarkAnalyzer
+
+        path = str(tmp_path / "empty.jsonl")
+        open(path, "w").close()
+        analyzer = BenchmarkAnalyzer(path)
+        analyzer.load()
+        s = analyzer.summary()
+        assert s["total_calls"] == 0
+        assert s["success_rate"] == 0.0
+
+    def test_percentiles(self, tmp_path):
+        from zerotoken.benchmark.analyzer import BenchmarkAnalyzer
+
+        path = str(tmp_path / "perc.jsonl")
+        durations = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        records = [_make_record(i + 1, duration_ms=float(d)) for i, d in enumerate(durations)]
+        _write_jsonl(records, path)
+        analyzer = BenchmarkAnalyzer(path)
+        analyzer.load()
+        s = analyzer.summary()
+        assert s["avg_duration_ms"] == 550.0
+        assert "p50_duration_ms" in s
+        assert "p95_duration_ms" in s
+
+
+class TestPrintReport:
+    def test_print_does_not_crash(self, tmp_path, capsys):
+        from zerotoken.benchmark.analyzer import BenchmarkAnalyzer
+
+        path = str(tmp_path / "print.jsonl")
+        _write_jsonl([_make_record(1), _make_record(2)], path)
+        analyzer = BenchmarkAnalyzer(path)
+        analyzer.load()
+        analyzer.print_report()
+        captured = capsys.readouterr()
+        assert "Benchmark Report" in captured.out
+        assert "browser_click" in captured.out
