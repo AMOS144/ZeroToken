@@ -202,6 +202,7 @@ def browser_tools() -> list[Tool]:
                 "condition": {"type": "string", "description": "Type of condition"},
                 "value": {"type": "string", "description": "Condition value"},
                 "timeout": {"type": "integer", "description": "Timeout in ms", "default": 30000},
+                "state": {"type": "string", "description": "Wait state: visible / attached / hidden / detached (default: visible)"},
                 **_SCREENSHOT_PROP,
             }, required=["condition"]),
         ),
@@ -219,29 +220,34 @@ def browser_tools() -> list[Tool]:
         # -- Tab 管理 --
         Tool(
             name="browser_new_tab",
-            description="Open a new tab with optional URL",
+            description="Open a new tab with optional URL, returns tab_id",
             inputSchema=_obj_schema({
                 "url": {"type": "string", "description": "URL to open in new tab (blank if omitted)"},
+                **_SCREENSHOT_PROP,
             }),
         ),
         Tool(
             name="browser_switch_tab",
-            description="Switch to a tab by index",
+            description="Switch to a tab by tab_id (use browser_list_tabs to see IDs)",
             inputSchema=_obj_schema({
-                "index": {"type": "integer", "description": "Tab index (0-based)"},
-            }, required=["index"]),
+                "tab_id": {"type": "integer", "description": "Tab ID to switch to (from list_tabs)"},
+                **_SCREENSHOT_PROP,
+            }, required=["tab_id"]),
         ),
         Tool(
             name="browser_close_tab",
-            description="Close a tab by index (defaults to current)",
+            description="Close a tab by tab_id (defaults to current tab)",
             inputSchema=_obj_schema({
-                "index": {"type": "integer", "description": "Tab index to close"},
+                "tab_id": {"type": "integer", "description": "Tab ID to close (from list_tabs)"},
+                **_SCREENSHOT_PROP,
             }),
         ),
         Tool(
             name="browser_list_tabs",
-            description="List all open tabs with url and title",
-            inputSchema=_obj_schema({}),
+            description="List all open tabs with tab_id, url and title",
+            inputSchema=_obj_schema({
+                **_SCREENSHOT_PROP,
+            }),
         ),
         # -- iframe --
         Tool(
@@ -279,6 +285,7 @@ def browser_tools() -> list[Tool]:
             description="Evaluate JavaScript expression in page context",
             inputSchema=_obj_schema({
                 "expression": {"type": "string", "description": "JavaScript expression to evaluate"},
+                **_SCREENSHOT_PROP,
             }, required=["expression"]),
         ),
     ]
@@ -380,7 +387,8 @@ async def _dispatch_action(
         "adaptive": args.pop("adaptive", False),
         "identifier": args.pop("identifier", None),
     }
-    take_ss = {"take_screenshot": args.get("include_screenshot", True)}
+    _ss_raw = args.get("include_screenshot")
+    take_ss = {"take_screenshot": _ss_raw} if _ss_raw is not None else {}
 
     # -- 导航 --
     if name == "browser_open":
@@ -394,6 +402,7 @@ async def _dispatch_action(
             args["condition"],
             args.get("value"),
             timeout=args.get("timeout", 30000),
+            state=args.get("state", "visible"),
             **take_ss,
         )
 
@@ -463,13 +472,13 @@ async def _dispatch_action(
 
     # -- Tab 管理 --
     if name == "browser_new_tab":
-        return await svc.new_tab(url=args.get("url"))
+        return await svc.new_tab(url=args.get("url"), **take_ss)
     if name == "browser_switch_tab":
-        return await svc.switch_tab(args["index"])
+        return await svc.switch_tab(args["tab_id"], **take_ss)
     if name == "browser_close_tab":
-        return await svc.close_tab(args.get("index"))
+        return await svc.close_tab(args.get("tab_id"), **take_ss)
     if name == "browser_list_tabs":
-        return await svc.list_tabs()
+        return await svc.list_tabs(**take_ss)
 
     # -- iframe --
     if name == "browser_enter_iframe":

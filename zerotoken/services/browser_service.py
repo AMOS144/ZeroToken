@@ -70,6 +70,7 @@ class BrowserService:
             "condition": condition,
             "value": value,
             "timeout": kw.get("timeout", 30000),
+            "state": kw.get("state", "visible"),
         }
         return await pipeline.execute(
             ActionType.WAIT_FOR, params, action_fn=wait_for_action,
@@ -247,7 +248,7 @@ class BrowserService:
         return await pipeline.execute(
             ActionType.NEW_TAB, {"url": url},
             action_fn=lambda _f, _e, p: new_tab_action(self._context, _e, p),
-            needs_selector=False, take_screenshot=False,
+            needs_selector=False, take_screenshot=kw.get("take_screenshot", False),
         )
 
     async def switch_tab(self, tab_id: int, **kw: Any) -> OperationRecord:
@@ -255,7 +256,7 @@ class BrowserService:
         return await pipeline.execute(
             ActionType.SWITCH_TAB, {"tab_id": tab_id},
             action_fn=lambda _f, _e, p: switch_tab_action(self._context, _e, p),
-            needs_selector=False, take_screenshot=kw.get("take_screenshot", True),
+            needs_selector=False, take_screenshot=kw.get("take_screenshot", False),
         )
 
     async def close_tab(self, tab_id: int | None = None, **kw: Any) -> OperationRecord:
@@ -263,7 +264,7 @@ class BrowserService:
         return await pipeline.execute(
             ActionType.CLOSE_TAB, {"tab_id": tab_id},
             action_fn=lambda _f, _e, p: close_tab_action(self._context, _e, p),
-            needs_selector=False, take_screenshot=False,
+            needs_selector=False, take_screenshot=kw.get("take_screenshot", False),
         )
 
     async def list_tabs(self, **kw: Any) -> OperationRecord:
@@ -271,7 +272,7 @@ class BrowserService:
         return await pipeline.execute(
             ActionType.LIST_TABS, {},
             action_fn=lambda _f, _e, p: list_tabs_action(self._context, _e, p),
-            needs_selector=False, take_screenshot=False,
+            needs_selector=False, take_screenshot=kw.get("take_screenshot", False),
         )
 
     # ---- iframe 管理（传入 context 而非 frame）----

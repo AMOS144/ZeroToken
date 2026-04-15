@@ -15,13 +15,33 @@ async def open_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[
 
 
 async def wait_for_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """等待条件（selector / url / text / navigation）"""
+    """等待条件（selector / url / text / navigation）
+    selector 模式支持 state 参数和 visible -> attached 自动降级。
+    """
     condition = params.get("condition", "")
     value = params.get("value")
     timeout = params.get("timeout", 30000)
+    state = params.get("state", "visible")
 
     if condition == "selector":
-        await frame.wait_for_selector(value, timeout=timeout)
+        try:
+            await frame.wait_for_selector(value, state=state, timeout=timeout)
+            return {"condition": condition, "value": value, "state": state}
+        except Exception as exc:
+            # visible 超时时尝试仅等待 DOM 附着（元素在视口外或 opacity:0 等场景）
+            if state == "visible" and "timeout" in str(exc).lower():
+                fallback_timeout = max(timeout // 2, 2000)
+                try:
+                    await frame.wait_for_selector(
+                        value, state="attached", timeout=fallback_timeout,
+                    )
+                    return {
+                        "condition": condition, "value": value,
+                        "state": "attached", "degraded": True,
+                    }
+                except Exception:
+                    pass
+            raise
     elif condition == "url":
         await frame.wait_for_url(value, timeout=timeout)
     elif condition == "text":
