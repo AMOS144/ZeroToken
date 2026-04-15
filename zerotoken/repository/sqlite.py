@@ -15,7 +15,7 @@ def _now_iso() -> str:
 
 
 def _json_dumps(obj: Any) -> str:
-    return json.dumps(obj, ensure_ascii=False)
+    return json.dumps(obj, ensure_ascii=False, default=str)
 
 
 def _json_loads(s: Optional[str]) -> Any:
