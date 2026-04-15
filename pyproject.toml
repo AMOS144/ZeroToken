@@ -53,6 +53,9 @@ py-modules = ["mcp_server", "mcp_server_http"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+markers = [
+    "integration: E2E integration tests requiring real browser (deselect by default)",
+]
 
 [tool.ruff]
 line-length = 100
