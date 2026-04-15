@@ -218,6 +218,7 @@ class BrowserService:
             "full_page": kw.get("full_page", False),
             "path": kw.get("path"),
             "selector": kw.get("selector"),
+            "timeout": kw.get("timeout", 10000),
         }
         return await pipeline.execute(
             ActionType.SCREENSHOT, params, action_fn=screenshot_action,

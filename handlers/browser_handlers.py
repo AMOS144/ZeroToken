@@ -184,6 +184,7 @@ def browser_tools() -> list[Tool]:
                 "path": {"type": "string", "description": "File path to save screenshot (optional)"},
                 "full_page": {"type": "boolean", "description": "Capture full page", "default": False},
                 "selector": {"type": "string", "description": "CSS selector to capture specific element"},
+                "timeout": {"type": "integer", "description": "Screenshot timeout in ms (default 10000)", "default": 10000},
             }),
         ),
         Tool(
@@ -464,6 +465,7 @@ async def _dispatch_action(
             path=args.get("path"),
             full_page=args.get("full_page", False),
             selector=args.get("selector"),
+            timeout=args.get("timeout", 10000),
         )
     if name == "browser_extract_data":
         return await svc.extract_data(args["schema"], **take_ss)

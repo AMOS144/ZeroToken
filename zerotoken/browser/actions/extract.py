@@ -31,18 +31,55 @@ async def get_html_action(frame: Any, element: Any, params: dict[str, Any]) -> d
 
 
 async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """截图：元素或整页，可选 full_page、落盘 path"""
+    """截图：三级降级策略（正常 -> 跳过动画 -> 放弃）"""
+    import asyncio
+
     full_page = params.get("full_page", False)
     path = params.get("path")
-    if element:
-        data = await element.screenshot()
-    else:
-        data = await frame.screenshot(full_page=full_page)
-    b64 = base64.b64encode(data).decode("utf-8")
-    if path:
-        with open(path, "wb") as f:
-            f.write(data)
-    return {"screenshot": b64, "path": path, "full_page": full_page}
+    timeout_ms = params.get("timeout", 10000)
+    timeout_s = timeout_ms / 1000
+
+    target = element if element else frame
+
+    def _screenshot_coro(degraded: bool):
+        # 元素截图不支持 full_page，仅整页/Frame 传入
+        kw: dict[str, Any] = {}
+        if not element:
+            kw["full_page"] = full_page
+        if degraded:
+            kw["animations"] = "disabled"
+        return target.screenshot(**kw)
+
+    # 第一级：正常截图
+    try:
+        data = await asyncio.wait_for(_screenshot_coro(False), timeout=timeout_s)
+        b64 = base64.b64encode(data).decode("utf-8")
+        if path:
+            with open(path, "wb") as f:
+                f.write(data)
+        return {"screenshot": b64, "path": path, "full_page": full_page}
+    except (asyncio.TimeoutError, Exception):
+        pass
+
+    # 第二级：禁用动画截图
+    try:
+        data = await asyncio.wait_for(_screenshot_coro(True), timeout=5)
+        b64 = base64.b64encode(data).decode("utf-8")
+        if path:
+            with open(path, "wb") as f:
+                f.write(data)
+        return {"screenshot": b64, "path": path, "full_page": full_page, "degraded": True}
+    except (asyncio.TimeoutError, Exception):
+        pass
+
+    # 第三级：放弃截图
+    return {
+        "screenshot": None,
+        "path": path,
+        "full_page": full_page,
+        "degraded": True,
+        "error": "screenshot timeout",
+    }
 
 
 async def extract_data_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
