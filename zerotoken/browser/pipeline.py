@@ -67,19 +67,33 @@ class ActionPipeline:
         # 按需通过 StabilityMiddleware 定位元素
         element = None
         candidates: list[SelectorCandidate] = []
+        js_fallback_used = False
         if needs_selector and params.get("selector"):
-            raw_element, raw_candidates = await self.stability.locate(
-                frame,
-                params["selector"],
-                auto_save=auto_save,
-                adaptive=adaptive,
-                identifier=identifier,
-            )
-            element = raw_element
-            candidates = [SelectorCandidate(**c) for c in raw_candidates]
+            try:
+                raw_element, raw_candidates = await self.stability.locate(
+                    frame,
+                    params["selector"],
+                    auto_save=auto_save,
+                    adaptive=adaptive,
+                    identifier=identifier,
+                )
+                element = raw_element
+                candidates = [SelectorCandidate(**c) for c in raw_candidates]
+            except Exception:
+                # JS fallback: 元素可能在 DOM 中但不可见
+                js_element = await frame.query_selector(params["selector"])
+                if js_element is not None:
+                    element = js_element
+                    js_fallback_used = True
+                else:
+                    raise
 
         # 执行实际动作
         result_data = await action_fn(frame, element, params)
+
+        # 标记 JS fallback
+        if js_fallback_used:
+            result_data["js_fallback"] = True
 
         # 捕获页面状态
         page_state = await self._capture_state(mp)
