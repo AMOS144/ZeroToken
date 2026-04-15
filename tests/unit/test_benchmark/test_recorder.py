@@ -112,3 +112,60 @@ def test_session_id_format(monkeypatch):
 
     rec = BenchmarkRecorder(output_dir=tempfile.mkdtemp())
     assert re.match(r"\d{8}_\d{6}_[a-f0-9]{6}$", rec.session_id)
+
+
+def test_screenshot_truncated_in_summary(monkeypatch):
+    """screenshot base64 应被截断为 '<N bytes>' 格式"""
+    monkeypatch.setenv("ZEROTOKEN_BENCHMARK", "1")
+    from zerotoken.benchmark.recorder import BenchmarkRecorder
+
+    d = tempfile.mkdtemp()
+    rec = BenchmarkRecorder(output_dir=d)
+    big_screenshot = "x" * 200000
+    result = [{"type": "text", "text": json.dumps({"success": True, "screenshot": big_screenshot})}]
+    rec.record("browser_click", {}, result, 100.0, None)
+    with open(os.path.join(d, os.listdir(d)[0])) as f:
+        data = json.loads(f.readline())
+    assert "200000 bytes" in data["result_summary"]["screenshot"]
+    assert len(data["result_summary"]["screenshot"]) < 100
+
+
+def test_large_string_truncated(monkeypatch):
+    """超过 1024 字节的字符串值应被截断"""
+    monkeypatch.setenv("ZEROTOKEN_BENCHMARK", "1")
+    from zerotoken.benchmark.recorder import BenchmarkRecorder
+
+    d = tempfile.mkdtemp()
+    rec = BenchmarkRecorder(output_dir=d)
+    big_html = "a" * 5000
+    result = [{"type": "text", "text": json.dumps({"success": True, "html": big_html})}]
+    rec.record("browser_get_html", {}, result, 50.0, None)
+    with open(os.path.join(d, os.listdir(d)[0])) as f:
+        data = json.loads(f.readline())
+    assert data["result_summary"]["html"].endswith("... <5000 chars>")
+    assert len(data["result_summary"]["html"]) < 300
+
+
+def test_result_size_bytes_correct(monkeypatch):
+    """result_size_bytes 应反映原始 JSON 的字节大小"""
+    monkeypatch.setenv("ZEROTOKEN_BENCHMARK", "1")
+    from zerotoken.benchmark.recorder import BenchmarkRecorder
+
+    d = tempfile.mkdtemp()
+    rec = BenchmarkRecorder(output_dir=d)
+    payload = json.dumps({"success": True, "data": "hello"})
+    result = [{"type": "text", "text": payload}]
+    rec.record("browser_evaluate", {}, result, 10.0, None)
+    with open(os.path.join(d, os.listdir(d)[0])) as f:
+        data = json.loads(f.readline())
+    assert data["result_size_bytes"] == len(payload.encode("utf-8"))
+
+
+def test_recorder_exception_does_not_propagate(monkeypatch):
+    """recorder 内部 IO 异常不应向外传播"""
+    monkeypatch.setenv("ZEROTOKEN_BENCHMARK", "1")
+    from zerotoken.benchmark.recorder import BenchmarkRecorder
+
+    rec = BenchmarkRecorder(output_dir="/nonexistent/path/that/should/fail")
+    # 不应抛出异常
+    rec.record("browser_click", {}, None, 10.0, None)
