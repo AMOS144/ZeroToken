@@ -14,6 +14,22 @@ ACTION_MAP = {
     "screenshot": "browser_screenshot",
     "wait_for": "browser_wait_for",
     "extract_data": "browser_extract_data",
+    "hover": "browser_hover",
+    "right_click": "browser_right_click",
+    "double_click": "browser_double_click",
+    "keyboard": "browser_keyboard",
+    "type_text": "browser_type_text",
+    "drag_drop": "browser_drag_drop",
+    "scroll": "browser_scroll",
+    "evaluate": "browser_evaluate",
+    "new_tab": "browser_new_tab",
+    "switch_tab": "browser_switch_tab",
+    "close_tab": "browser_close_tab",
+    "list_tabs": "browser_list_tabs",
+    "enter_iframe": "browser_enter_iframe",
+    "exit_iframe": "browser_exit_iframe",
+    "file_upload": "browser_upload",
+    "file_download": "browser_download",
 }
 
 
