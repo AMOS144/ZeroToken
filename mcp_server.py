@@ -1,6 +1,7 @@
 """ZeroToken MCP Server - 入口点"""
 import asyncio
 import os
+import time
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -11,6 +12,7 @@ from zerotoken.repository.sqlite import (
     SQLiteSessionRepo, SQLiteRuntimeRepo, SQLiteFingerprintRepo, SQLiteBindingRepo,
 )
 from zerotoken.services import BrowserService, TrajectoryService, ScriptService
+from zerotoken.benchmark import BenchmarkRecorder
 from handlers.browser_handlers import browser_tools, handle_browser_tool
 from handlers.trajectory_handlers import trajectory_tools, handle_trajectory_tool
 from handlers.script_handlers import script_tools, handle_script_tool
@@ -21,6 +23,9 @@ _db_conn = None
 _browser_svc = None
 _trajectory_svc = None
 _script_svc = None
+
+_benchmark_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "benchmarks")
+_recorder = BenchmarkRecorder(output_dir=_benchmark_dir)
 
 
 def _init_services():
@@ -49,15 +54,31 @@ async def list_tools():
     return browser_tools() + trajectory_tools() + script_tools()
 
 
-@server.call_tool()
-async def call_tool(name: str, arguments: dict):
-    _init_services()
+async def _dispatch(name: str, arguments: dict):
+    """工具分发（从 call_tool 提取，供 benchmark 包装）"""
     if name.startswith("browser_"):
         return await handle_browser_tool(name, arguments, _browser_svc, _trajectory_svc)
     elif name.startswith("trajectory_"):
         return await handle_trajectory_tool(name, arguments, _trajectory_svc)
     else:
         return await handle_script_tool(name, arguments, _script_svc, browser_svc=_browser_svc)
+
+
+@server.call_tool()
+async def call_tool(name: str, arguments: dict):
+    _init_services()
+    start = time.monotonic()
+    result = None
+    error = None
+    try:
+        result = await _dispatch(name, arguments)
+        return result
+    except Exception as e:
+        error = e
+        raise
+    finally:
+        duration_ms = (time.monotonic() - start) * 1000
+        _recorder.record(name, arguments, result, duration_ms, error)
 
 
 async def main():
