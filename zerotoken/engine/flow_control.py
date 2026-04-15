@@ -25,6 +25,8 @@ class FlowResult:
     failed_step: Optional[ScriptStep] = None
     failed_record: Optional[OperationRecord] = None
     steps_executed: int = 0
+    # 当前 execute_steps 批次中失败步骤的下标（用于顶层脚本绝对 step_index）
+    failed_batch_offset: Optional[int] = None
 
 
 class FlowExecutor:
@@ -44,9 +46,12 @@ class FlowExecutor:
 
     async def execute_steps(self, steps: list[ScriptStep]) -> FlowResult:
         """按顺序递归执行步骤列表"""
-        for step in steps:
+        for i, step in enumerate(steps):
             result = await self._execute_one(step)
             if result.paused or result.failed:
+                # 嵌套 execute_steps 已设置 failed_batch_offset 时不覆盖
+                if result.paused and result.failed_batch_offset is None:
+                    result.failed_batch_offset = i
                 return result
         return FlowResult(completed=True, steps_executed=self._total_steps)
 
