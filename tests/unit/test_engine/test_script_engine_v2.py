@@ -183,3 +183,85 @@ async def test_resume_with_patch_step(mock_browser_svc, mock_session_repo, mock_
     assert resume_result["status"] == "completed"
     patched_call = mock_browser_svc.click.call_args
     assert patched_call.args[0] == "#new-btn" or patched_call.kwargs.get("selector") == "#new-btn"
+
+
+@pytest.mark.asyncio
+async def test_trajectory_actions_auto_skipped(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+    """trajectory_start 等轨迹控制步骤应自动跳过（不报 Unknown action）"""
+    from zerotoken.engine.script_engine_v2 import ScriptEngineV2
+
+    script = Script(
+        task_id="test", goal="test",
+        steps=[
+            ScriptStep(action="trajectory_start", params={"task_id": "t", "goal": "g"}),
+            ScriptStep(action="browser_open", params={"url": "https://example.com"}),
+            ScriptStep(action="trajectory_complete", params={}),
+        ],
+    )
+    engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
+    result = await engine.run(script)
+    assert result["status"] == "completed"
+    mock_browser_svc.open.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_browser_init_actually_called(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+    """browser_init 步骤应真正调用 browser_svc.init()，而非跳过"""
+    from zerotoken.engine.script_engine_v2 import ScriptEngineV2
+
+    mock_browser_svc.init = AsyncMock(return_value={"success": True})
+
+    script = Script(
+        task_id="test", goal="test",
+        steps=[
+            ScriptStep(action="browser_init", params={"headless": True, "stealth": True}),
+            ScriptStep(action="browser_open", params={"url": "https://example.com"}),
+        ],
+    )
+    engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
+    result = await engine.run(script)
+    assert result["status"] == "completed"
+    mock_browser_svc.init.assert_called_once_with(headless=True, stealth=True)
+    mock_browser_svc.open.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_browser_close_actually_called(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+    """browser_close 步骤应真正调用 browser_svc.close()"""
+    from zerotoken.engine.script_engine_v2 import ScriptEngineV2
+
+    mock_browser_svc.close = AsyncMock(return_value={"success": True})
+
+    script = Script(
+        task_id="test", goal="test",
+        steps=[
+            ScriptStep(action="browser_open", params={"url": "https://example.com"}),
+            ScriptStep(action="browser_close", params={}),
+        ],
+    )
+    engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
+    result = await engine.run(script)
+    assert result["status"] == "completed"
+    mock_browser_svc.close.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_new_tab_assign_to_captures_tab_id(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+    """new_tab 带 assign_to 时，返回的 tab_id 应存入变量环境供后续使用"""
+    from zerotoken.engine.script_engine_v2 import ScriptEngineV2
+
+    mock_browser_svc.new_tab = AsyncMock(return_value=_ok_record(tab_id=5, url="https://new.com"))
+    mock_browser_svc.close_tab = AsyncMock(return_value=_ok_record())
+
+    script = Script(
+        task_id="test", goal="test",
+        steps=[
+            ScriptStep(action="browser_new_tab", params={"url": "https://new.com"}, assign_to="_new_tab_0"),
+            ScriptStep(action="browser_close_tab", params={"tab_id": "{{_new_tab_0.tab_id}}"}),
+        ],
+    )
+    engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
+    result = await engine.run(script)
+    assert result["status"] == "completed"
+    call_args = mock_browser_svc.close_tab.call_args
+    assert call_args.kwargs.get("tab_id") == 5 or (call_args.args and call_args.args[0] == 5)

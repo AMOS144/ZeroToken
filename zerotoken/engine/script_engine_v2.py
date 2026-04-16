@@ -44,6 +44,16 @@ _ACTION_METHOD_MAP = {
     "browser_download": "download",
 }
 
+# 轨迹控制步骤，引擎自动跳过（这些不是浏览器操作）
+_SKIP_ACTIONS = {
+    "trajectory_start", "trajectory_complete", "trajectory_get",
+}
+
+# 生命周期步骤，引擎直接调 BrowserService.init() / .close()
+_LIFECYCLE_ACTIONS = {
+    "browser_init", "browser_close",
+}
+
 # 第一个位置参数为 selector 的动作
 _SELECTOR_ACTIONS = {
     "click", "input", "hover", "right_click", "double_click",
@@ -172,6 +182,41 @@ class ScriptEngineV2:
 
     async def _run_browser_action(self, step: ScriptStep) -> OperationRecord:
         """调用 BrowserService 执行一个动作步骤"""
+        from zerotoken.models.operation import (
+            OperationRecord as OR, OperationResult, PageState, ActionType,
+        )
+
+        # 轨迹控制步骤自动跳过，返回成功 record
+        if step.action in _SKIP_ACTIONS:
+            return OR(
+                step=0, action=ActionType.EVALUATE, params=step.params,
+                result=OperationResult(success=True),
+                page_state=PageState(),
+            )
+
+        # 浏览器生命周期步骤，真正执行 init/close
+        if step.action in _LIFECYCLE_ACTIONS:
+            try:
+                if step.action == "browser_init":
+                    params = dict(step.params)
+                    await self._browser.init(
+                        headless=params.get("headless", True),
+                        stealth=params.get("stealth", False),
+                    )
+                elif step.action == "browser_close":
+                    await self._browser.close()
+                return OR(
+                    step=0, action=ActionType.EVALUATE, params=step.params,
+                    result=OperationResult(success=True),
+                    page_state=PageState(),
+                )
+            except Exception as e:
+                return OR(
+                    step=0, action=ActionType.EVALUATE, params=step.params,
+                    result=OperationResult(success=False, error=str(e)),
+                    page_state=PageState(),
+                )
+
         method_name = _ACTION_METHOD_MAP.get(step.action)
         if method_name is None:
             from zerotoken.models.operation import (
