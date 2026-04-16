@@ -27,7 +27,8 @@ def test_recording_mode_records():
     assert len(traj.operations) == 1
 
 
-def test_explore_mode_skips_recording():
+def test_explore_mode_default_discards():
+    """keep='none'（默认）时探索步骤全部丢弃"""
     from zerotoken.services.trajectory_service import TrajectoryService
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
@@ -37,10 +38,46 @@ def test_explore_mode_skips_recording():
     svc.record_operation(_make_record(step=1))
     svc.record_operation(_make_record(step=2))
     result = svc.stop_explore()
-    assert result["skipped_steps"] == 2
+    assert result["skipped"] == 2
+    assert result["kept"] == 0
     assert svc.should_record() is True
     traj = svc.get_current_trajectory()
     assert len(traj.operations) == 0
+
+
+def test_explore_mode_keep_last():
+    """keep='last' 时只保留探索中最后一步到正式轨迹"""
+    from zerotoken.services.trajectory_service import TrajectoryService
+    mock_repo = MagicMock()
+    svc = TrajectoryService(trajectory_repo=mock_repo)
+    svc.start_trajectory("t1", "test goal")
+    svc.start_explore(reason="trying selectors")
+    svc.record_operation(_make_record(step=1))
+    svc.record_operation(_make_record(step=2))
+    svc.record_operation(_make_record(step=3))
+    result = svc.stop_explore(keep="last")
+    assert result["kept"] == 1
+    assert result["skipped"] == 2
+    traj = svc.get_current_trajectory()
+    assert len(traj.operations) == 1
+    assert traj.operations[0].step == 3
+
+
+def test_explore_mode_keep_all():
+    """keep='all' 时全部探索步骤追加到正式轨迹"""
+    from zerotoken.services.trajectory_service import TrajectoryService
+    mock_repo = MagicMock()
+    svc = TrajectoryService(trajectory_repo=mock_repo)
+    svc.start_trajectory("t1", "test goal")
+    svc.record_operation(_make_record(step=0))
+    svc.start_explore(reason="exploring")
+    svc.record_operation(_make_record(step=1))
+    svc.record_operation(_make_record(step=2))
+    result = svc.stop_explore(keep="all")
+    assert result["kept"] == 2
+    assert result["skipped"] == 0
+    traj = svc.get_current_trajectory()
+    assert len(traj.operations) == 3
 
 
 def test_explore_mode_without_trajectory_raises():

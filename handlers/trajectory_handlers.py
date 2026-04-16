@@ -74,9 +74,9 @@ def trajectory_tools() -> list[Tool]:
         ),
         Tool(
             name="trajectory_explore_stop",
-            description="Exit explore mode and resume recording",
+            description="Exit explore mode and resume recording. keep: none=discard all, last=keep last step, all=keep all explore steps",
             inputSchema=_obj_schema({
-                "keep_last": {"type": "boolean", "description": "Keep last explore step in trajectory", "default": False},
+                "keep": {"type": "string", "description": "Which explore steps to keep: none / last / all (default: none)"},
             }),
         ),
         Tool(
@@ -172,7 +172,7 @@ async def handle_trajectory_tool(
             return _resp({"success": True, **result})
 
         if name == "trajectory_explore_stop":
-            result = trajectory_svc.stop_explore(keep_last=args.get("keep_last", False))
+            result = trajectory_svc.stop_explore(keep=args.get("keep", "none"))
             return _resp({"success": True, **result})
 
         if name == "trajectory_status":

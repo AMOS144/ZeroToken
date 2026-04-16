@@ -21,11 +21,13 @@ class TrajectoryService:
         self._current: Optional[Trajectory] = None
         self._mode = RecordingMode.RECORDING
         self._explore_depth = 0
+        self._explore_buffer: list[OperationRecord] = []
 
     def start_trajectory(self, task_id: str, goal: str) -> Trajectory:
         self._current = Trajectory(task_id=task_id, goal=goal)
         self._mode = RecordingMode.RECORDING
         self._explore_depth = 0
+        self._explore_buffer = []
         return self._current
 
     def get_current_trajectory(self) -> Optional[Trajectory]:
@@ -35,9 +37,10 @@ class TrajectoryService:
         return self._mode == RecordingMode.RECORDING
 
     def record_operation(self, record: OperationRecord) -> None:
-        """记录操作；探索模式下只计数不入轨迹"""
+        """记录操作；探索模式下存入缓冲区而非正式轨迹"""
         if self._mode == RecordingMode.EXPLORING:
             self._explore_depth += 1
+            self._explore_buffer.append(record)
             return
         if self._current:
             self._current.add_operation(record)
@@ -48,14 +51,28 @@ class TrajectoryService:
             raise ValueError("No active trajectory")
         self._mode = RecordingMode.EXPLORING
         self._explore_depth = 0
+        self._explore_buffer = []
         return {"mode": "exploring", "reason": reason}
 
-    def stop_explore(self, keep_last: bool = False) -> dict[str, Any]:
-        """退出探索模式，返回跳过的步数"""
-        skipped = self._explore_depth
+    def stop_explore(self, keep: str = "none") -> dict[str, Any]:
+        """退出探索模式。
+        keep: "none" = 全部丢弃, "last" = 保留最后一步, "all" = 全部追加到正式轨迹
+        """
+        buffered = self._explore_buffer
+        kept = 0
+        if self._current and buffered:
+            if keep == "last":
+                self._current.add_operation(buffered[-1])
+                kept = 1
+            elif keep == "all":
+                for op in buffered:
+                    self._current.add_operation(op)
+                kept = len(buffered)
+        skipped = len(buffered) - kept
         self._mode = RecordingMode.RECORDING
         self._explore_depth = 0
-        return {"mode": "recording", "skipped_steps": skipped}
+        self._explore_buffer = []
+        return {"mode": "recording", "kept": kept, "skipped": skipped}
 
     def complete_trajectory(self) -> Optional[Trajectory]:
         """完成当前轨迹，保存到仓库"""
