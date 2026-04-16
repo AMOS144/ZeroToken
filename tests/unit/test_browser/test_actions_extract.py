@@ -34,31 +34,13 @@ async def test_get_html_action_full_page():
 
 
 @pytest.mark.asyncio
-async def test_screenshot_action_success():
-    """正常截图应返回 base64 数据"""
-    from zerotoken.browser.actions.extract import screenshot_action
-
-    mock_frame = AsyncMock()
-    mock_frame.screenshot = AsyncMock(return_value=b"fake-png-data")
-    result = await screenshot_action(mock_frame, None, {})
-    assert result["screenshot"] is not None
-    assert result.get("degraded") is not True
-
-
-@pytest.mark.asyncio
-async def test_screenshot_action_timeout_degrades_to_cdp():
-    """正常截图超时应降级为 CDP 截图"""
-    import asyncio
+async def test_screenshot_action_cdp_default():
+    """默认截图应走 CDP，返回 base64 数据"""
     import base64
-    from unittest.mock import MagicMock
     from zerotoken.browser.actions.extract import screenshot_action
 
-    async def slow_screenshot(**kwargs):
-        await asyncio.sleep(100)
-        return b"data"
-
+    fake_b64 = base64.b64encode(b"cdp-png").decode()
     mock_cdp = AsyncMock()
-    fake_b64 = base64.b64encode(b"cdp-png-data").decode()
     mock_cdp.send = AsyncMock(return_value={"data": fake_b64})
     mock_cdp.detach = AsyncMock()
 
@@ -66,27 +48,34 @@ async def test_screenshot_action_timeout_degrades_to_cdp():
     mock_context.new_cdp_session = AsyncMock(return_value=mock_cdp)
 
     mock_frame = AsyncMock()
-    mock_frame.screenshot = slow_screenshot
     mock_frame.context = mock_context
 
-    result = await screenshot_action(mock_frame, None, {"timeout": 100})
-    assert result["degraded"] is True
-    assert result["screenshot"] is not None
+    result = await screenshot_action(mock_frame, None, {})
+    assert result["screenshot"] == fake_b64
     mock_cdp.send.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_screenshot_action_all_fail_returns_none():
-    """正常和降级截图都失败时应返回 None 而不是抛异常"""
-    import asyncio
+async def test_screenshot_action_element_uses_playwright():
+    """元素截图应走 Playwright 而非 CDP"""
     from zerotoken.browser.actions.extract import screenshot_action
 
-    async def always_slow(**kwargs):
-        await asyncio.sleep(100)
-        return b"data"
+    mock_element = AsyncMock()
+    mock_element.screenshot = AsyncMock(return_value=b"element-png")
+
+    result = await screenshot_action(AsyncMock(), mock_element, {})
+    assert result["screenshot"] is not None
+    mock_element.screenshot.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_screenshot_action_all_fail_returns_none():
+    """CDP 也失败时应返回 None 而不是抛异常"""
+    from zerotoken.browser.actions.extract import screenshot_action
 
     mock_frame = AsyncMock()
-    mock_frame.screenshot = always_slow
+    mock_frame.context = AsyncMock()
+    mock_frame.context.new_cdp_session = AsyncMock(side_effect=Exception("no cdp"))
 
     result = await screenshot_action(mock_frame, None, {"timeout": 50})
     assert result["screenshot"] is None

@@ -129,12 +129,19 @@ class ActionPipeline:
         )
 
     async def _take_screenshot_safe(self, page: Any, timeout: float = 5) -> str | None:
-        """安全截图，带超时（秒），超时或失败返回 None"""
+        """CDP 快速截图，不等待字体/网络。失败返回 None。"""
         import asyncio
         try:
-            data = await asyncio.wait_for(page.screenshot(), timeout=timeout)
-            return base64.b64encode(data).decode("utf-8")
-        except (asyncio.TimeoutError, Exception):
+            cdp = await page.context.new_cdp_session(page)
+            try:
+                result = await asyncio.wait_for(
+                    cdp.send("Page.captureScreenshot", {"format": "png"}),
+                    timeout=timeout,
+                )
+                return result["data"]
+            finally:
+                await cdp.detach()
+        except Exception:
             return None
 
     async def capture_state_safe(self) -> PageState | None:
