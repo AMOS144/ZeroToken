@@ -256,7 +256,13 @@ class ScriptEngineV2:
                     return await method(selector, **params)
             elif method_name == "open" and "url" in params:
                 url = params.pop("url")
-                return await method(url, **params)
+                record = await method(url, **params)
+                # 注入 tab_id 到 result.data，使 assign_to 能捕获
+                if record.result.success and record.page_state:
+                    if record.result.data is None:
+                        record.result.data = {}
+                    record.result.data.setdefault("tab_id", record.page_state.tab_id)
+                return record
             elif method_name == "wait_for" and "condition" in params:
                 condition = params.pop("condition")
                 value = params.pop("value", None)

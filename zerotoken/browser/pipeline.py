@@ -128,12 +128,13 @@ class ActionPipeline:
             tab_count=len(self.context._pages),
         )
 
-    async def _take_screenshot_safe(self, page: Any) -> str | None:
-        """安全截图，失败返回 None"""
+    async def _take_screenshot_safe(self, page: Any, timeout: float = 5) -> str | None:
+        """安全截图，带超时（秒），超时或失败返回 None"""
+        import asyncio
         try:
-            data = await page.screenshot()
+            data = await asyncio.wait_for(page.screenshot(), timeout=timeout)
             return base64.b64encode(data).decode("utf-8")
-        except Exception:
+        except (asyncio.TimeoutError, Exception):
             return None
 
     async def capture_state_safe(self) -> PageState | None:

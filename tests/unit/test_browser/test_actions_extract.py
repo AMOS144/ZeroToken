@@ -46,25 +46,33 @@ async def test_screenshot_action_success():
 
 
 @pytest.mark.asyncio
-async def test_screenshot_action_timeout_degrades():
-    """正常截图超时应降级为 animations=disabled"""
+async def test_screenshot_action_timeout_degrades_to_cdp():
+    """正常截图超时应降级为 CDP 截图"""
     import asyncio
+    import base64
+    from unittest.mock import MagicMock
     from zerotoken.browser.actions.extract import screenshot_action
 
-    call_args_list = []
+    async def slow_screenshot(**kwargs):
+        await asyncio.sleep(100)
+        return b"data"
 
-    async def slow_then_fast(**kwargs):
-        call_args_list.append(kwargs)
-        if "animations" not in kwargs:
-            await asyncio.sleep(100)
-        return b"degraded-png-data"
+    mock_cdp = AsyncMock()
+    fake_b64 = base64.b64encode(b"cdp-png-data").decode()
+    mock_cdp.send = AsyncMock(return_value={"data": fake_b64})
+    mock_cdp.detach = AsyncMock()
+
+    mock_context = AsyncMock()
+    mock_context.new_cdp_session = AsyncMock(return_value=mock_cdp)
 
     mock_frame = AsyncMock()
-    mock_frame.screenshot = slow_then_fast
+    mock_frame.screenshot = slow_screenshot
+    mock_frame.context = mock_context
 
     result = await screenshot_action(mock_frame, None, {"timeout": 100})
     assert result["degraded"] is True
     assert result["screenshot"] is not None
+    mock_cdp.send.assert_called_once()
 
 
 @pytest.mark.asyncio

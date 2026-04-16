@@ -31,7 +31,7 @@ async def get_html_action(frame: Any, element: Any, params: dict[str, Any]) -> d
 
 
 async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """截图：三级降级策略（正常 -> 跳过动画 -> 放弃）"""
+    """截图：三级降级策略（Playwright 正常 -> CDP 快速截图 -> 放弃）"""
     import asyncio
 
     full_page = params.get("full_page", False)
@@ -41,18 +41,12 @@ async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) ->
 
     target = element if element else frame
 
-    def _screenshot_coro(degraded: bool):
-        # 元素截图不支持 full_page，仅整页/Frame 传入
+    # 第一级：Playwright 正常截图
+    try:
         kw: dict[str, Any] = {}
         if not element:
             kw["full_page"] = full_page
-        if degraded:
-            kw["animations"] = "disabled"
-        return target.screenshot(**kw)
-
-    # 第一级：正常截图
-    try:
-        data = await asyncio.wait_for(_screenshot_coro(False), timeout=timeout_s)
+        data = await asyncio.wait_for(target.screenshot(**kw), timeout=timeout_s)
         b64 = base64.b64encode(data).decode("utf-8")
         if path:
             with open(path, "wb") as f:
@@ -61,15 +55,25 @@ async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) ->
     except (asyncio.TimeoutError, Exception):
         pass
 
-    # 第二级：禁用动画截图
+    # 第二级：CDP 直接截图（绕过 Playwright 的字体/网络等待）
     try:
-        data = await asyncio.wait_for(_screenshot_coro(True), timeout=5)
-        b64 = base64.b64encode(data).decode("utf-8")
-        if path:
-            with open(path, "wb") as f:
-                f.write(data)
-        return {"screenshot": b64, "path": path, "full_page": full_page, "degraded": True}
-    except (asyncio.TimeoutError, Exception):
+        page = frame if hasattr(frame, "context") else frame.page
+        cdp = await page.context.new_cdp_session(page)
+        try:
+            result = await asyncio.wait_for(
+                cdp.send("Page.captureScreenshot", {"format": "png"}),
+                timeout=5,
+            )
+            import base64 as b64mod
+            data = b64mod.b64decode(result["data"])
+            b64_str = result["data"]
+            if path:
+                with open(path, "wb") as f:
+                    f.write(data)
+            return {"screenshot": b64_str, "path": path, "full_page": full_page, "degraded": True}
+        finally:
+            await cdp.detach()
+    except Exception:
         pass
 
     # 第三级：放弃截图
