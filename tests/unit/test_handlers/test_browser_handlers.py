@@ -48,3 +48,44 @@ def test_handle_browser_tool_exists():
     from handlers.browser_handlers import handle_browser_tool
     import inspect
     assert inspect.iscoroutinefunction(handle_browser_tool)
+
+
+def test_close_tab_schema_uses_tab_id():
+    """browser_close_tab schema 应使用 tab_id 参数而非 index"""
+    from handlers.browser_handlers import browser_tools
+    tools_by_name = {t.name: t for t in browser_tools()}
+    close_tab = tools_by_name["browser_close_tab"]
+    props = close_tab.inputSchema["properties"]
+    assert "tab_id" in props, "close_tab should have tab_id parameter"
+    assert "index" not in props, "close_tab should not have index parameter"
+    assert "include_screenshot" in props, "close_tab should have include_screenshot"
+
+
+def test_switch_tab_schema_uses_tab_id():
+    """browser_switch_tab schema 应使用 tab_id 参数而非 index"""
+    from handlers.browser_handlers import browser_tools
+    tools_by_name = {t.name: t for t in browser_tools()}
+    switch_tab = tools_by_name["browser_switch_tab"]
+    props = switch_tab.inputSchema["properties"]
+    assert "tab_id" in props
+    assert "index" not in props
+    assert "include_screenshot" in props
+
+
+def test_evaluate_schema_has_screenshot():
+    """browser_evaluate schema 应包含 include_screenshot 参数"""
+    from handlers.browser_handlers import browser_tools
+    tools_by_name = {t.name: t for t in browser_tools()}
+    evaluate = tools_by_name["browser_evaluate"]
+    props = evaluate.inputSchema["properties"]
+    assert "include_screenshot" in props
+
+
+def test_tab_tools_have_screenshot():
+    """所有 tab 管理工具应包含 include_screenshot 参数"""
+    from handlers.browser_handlers import browser_tools
+    tools_by_name = {t.name: t for t in browser_tools()}
+    for name in ("browser_new_tab", "browser_switch_tab", "browser_close_tab", "browser_list_tabs"):
+        tool = tools_by_name[name]
+        props = tool.inputSchema["properties"]
+        assert "include_screenshot" in props, f"{name} missing include_screenshot"
