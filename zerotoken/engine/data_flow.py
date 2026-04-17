@@ -14,7 +14,7 @@ import copy
 import re
 from typing import Any
 
-_PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
+_PLACEHOLDER_RE = re.compile(r"\{\{(\w+(?:\.\w+)*)\}\}")
 
 # 表达式中禁止出现的标识符（避免 open/__import__ 等绕过白名单）
 _BLOCKED_IDENTIFIERS = frozenset(
@@ -46,11 +46,17 @@ class VarsEnvironment:
         self._vars[name] = value
 
     def resolve_params(self, params: dict[str, Any]) -> dict[str, Any]:
-        """替换 dict 中所有字符串值里的 {{varname}}，缺失变量保留原文"""
+        """替换 dict 中所有字符串值里的 {{varname}} / {{var.key}}。
+        当整个值仅是一个占位符时，返回原始类型（保留 int/dict 等）。"""
         resolved = {}
         for k, v in params.items():
             if isinstance(v, str):
-                resolved[k] = self._resolve_string(v)
+                m = _PLACEHOLDER_RE.fullmatch(v.strip())
+                if m:
+                    raw = self._resolve_path(m.group(1))
+                    resolved[k] = raw if raw is not None else v
+                else:
+                    resolved[k] = self._resolve_string(v)
             else:
                 resolved[k] = v
         return resolved
@@ -70,10 +76,21 @@ class VarsEnvironment:
 
     # ---- 内部方法 ----
 
+    def _resolve_path(self, path: str) -> Any:
+        """沿 dot 路径解析变量值，如 'tab.tab_id' -> vars['tab']['tab_id']"""
+        parts = path.split(".")
+        val = self._vars.get(parts[0])
+        for part in parts[1:]:
+            if isinstance(val, dict):
+                val = val.get(part)
+            else:
+                return None
+        return val
+
     def _resolve_string(self, text: str) -> str:
         def _replacer(m: re.Match) -> str:
-            name = m.group(1)
-            val = self._vars.get(name)
+            path = m.group(1)
+            val = self._resolve_path(path)
             if val is None:
                 return m.group(0)
             return str(val)

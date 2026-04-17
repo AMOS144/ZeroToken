@@ -125,7 +125,8 @@ class BrowserContextManager:
     async def switch_tab(self, tab_id: int) -> ManagedPage:
         """切换到指定标签页"""
         if tab_id not in self._pages:
-            raise ValueError(f"Tab {tab_id} not found")
+            available = sorted(self._pages.keys())
+            raise ValueError(f"Tab {tab_id} not found. Available tabs: {available}")
         self._active_tab_id = tab_id
         await self._pages[tab_id].page.bring_to_front()
         return self._pages[tab_id]
@@ -134,7 +135,8 @@ class BrowserContextManager:
         """关闭标签页，自动切到其他存活标签页"""
         tid = tab_id if tab_id is not None else self._active_tab_id
         if tid not in self._pages:
-            raise ValueError(f"Tab {tid} not found")
+            available = sorted(self._pages.keys())
+            raise ValueError(f"Tab {tid} not found. Available tabs: {available}")
         await self._pages[tid].page.close()
         del self._pages[tid]
         if self._pages and tid == self._active_tab_id:

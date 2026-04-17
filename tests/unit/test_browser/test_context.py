@@ -76,15 +76,28 @@ async def test_switch_tab(mock_playwright):
 
 @pytest.mark.asyncio
 async def test_switch_tab_invalid(mock_playwright):
-    """switch_tab() 传入不存在的 tab_id 应抛出 ValueError"""
+    """switch_tab() 传入不存在的 tab_id 应抛出 ValueError，并显示可用 tab 列表"""
     mock_pw, mock_browser, mock_context, mock_page = mock_playwright
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
-        with pytest.raises(ValueError, match="Tab 99 not found"):
+        with pytest.raises(ValueError, match=r"Tab 99 not found.*Available tabs.*\[0\]"):
             await mgr.switch_tab(99)
+
+
+@pytest.mark.asyncio
+async def test_close_tab_invalid_shows_available(mock_playwright):
+    """close_tab() 传入不存在的 tab_id 应在错误信息中列出可用 tab"""
+    mock_pw, mock_browser, mock_context, mock_page = mock_playwright
+    with patch("zerotoken.browser.context.async_playwright") as mock_ap:
+        mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
+        from zerotoken.browser.context import BrowserContextManager
+        mgr = BrowserContextManager()
+        await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
+        with pytest.raises(ValueError, match=r"Tab 99 not found.*Available tabs.*\[0\]"):
+            await mgr.close_tab(99)
 
 
 @pytest.mark.asyncio

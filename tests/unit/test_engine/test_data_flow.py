@@ -154,3 +154,48 @@ def test_eval_blocks_dangerous():
         env.eval_expr("__import__('os').system('ls')")
     with pytest.raises(ValueError, match="not allowed"):
         env.eval_expr("open('/etc/passwd')")
+
+
+def test_resolve_params_dotted_path():
+    """{{var.key}} 应正确解析 dict 内的字段"""
+    from zerotoken.engine.data_flow import VarsEnvironment
+
+    env = VarsEnvironment({"tab": {"tab_id": 3, "url": "https://example.com"}})
+    params = {"tab_id": "{{tab.tab_id}}", "label": "info: {{tab.url}}"}
+    resolved = env.resolve_params(params)
+    assert resolved["tab_id"] == 3
+    assert resolved["label"] == "info: https://example.com"
+
+
+def test_resolve_params_dotted_path_nested():
+    """多层嵌套的 dot 路径应能正常解析"""
+    from zerotoken.engine.data_flow import VarsEnvironment
+
+    env = VarsEnvironment({"a": {"b": {"c": 42}}})
+    resolved = env.resolve_params({"val": "{{a.b.c}}"})
+    assert resolved["val"] == 42
+
+
+def test_resolve_params_dotted_path_missing():
+    """dot 路径找不到时保留原始占位符"""
+    from zerotoken.engine.data_flow import VarsEnvironment
+
+    env = VarsEnvironment({"tab": {"tab_id": 3}})
+    resolved = env.resolve_params({"x": "{{tab.nonexist}}"})
+    assert resolved["x"] == "{{tab.nonexist}}"
+
+
+def test_resolve_params_preserves_native_type_for_single_placeholder():
+    """当整个值为单个 {{var}} 时，返回原始类型而非字符串"""
+    from zerotoken.engine.data_flow import VarsEnvironment
+
+    env = VarsEnvironment({"count": 42, "flag": True, "data": {"k": "v"}})
+    resolved = env.resolve_params({
+        "a": "{{count}}",
+        "b": "{{flag}}",
+        "c": "{{data}}",
+    })
+    assert resolved["a"] == 42
+    assert isinstance(resolved["a"], int)
+    assert resolved["b"] is True
+    assert resolved["c"] == {"k": "v"}
