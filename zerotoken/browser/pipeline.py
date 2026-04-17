@@ -1,7 +1,7 @@
 """统一执行管道：所有浏览器操作经过同一流程"""
 from __future__ import annotations
 
-import base64
+import asyncio
 from typing import Any, Awaitable, Callable
 
 from zerotoken.models.operation import (
@@ -130,7 +130,6 @@ class ActionPipeline:
 
     async def _take_screenshot_safe(self, page: Any, timeout: float = 5) -> str | None:
         """CDP 快速截图，不等待字体/网络。失败返回 None。"""
-        import asyncio
         try:
             cdp = await page.context.new_cdp_session(page)
             try:

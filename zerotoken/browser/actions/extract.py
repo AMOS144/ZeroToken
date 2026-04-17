@@ -1,6 +1,7 @@
 """提取类动作：get_text, get_html, screenshot, extract_data"""
 from __future__ import annotations
 
+import asyncio
 import base64
 from typing import Any
 
@@ -30,48 +31,58 @@ async def get_html_action(frame: Any, element: Any, params: dict[str, Any]) -> d
     return {"html": html}
 
 
-async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
-    """截图：默认 CDP 快速截图，元素截图或 full_page 时用 Playwright"""
-    import asyncio
+async def _playwright_screenshot(
+    frame: Any, element: Any, *, full_page: bool, timeout_s: float,
+) -> bytes:
+    """用 Playwright 截图；element 截图不支持 full_page"""
+    if element:
+        return await asyncio.wait_for(element.screenshot(), timeout=timeout_s)
+    return await asyncio.wait_for(
+        frame.screenshot(full_page=full_page), timeout=timeout_s,
+    )
 
+
+async def _cdp_screenshot(frame: Any, *, timeout_s: float) -> str:
+    """用 CDP 快速截图，绕过字体/网络等待，返回 base64 字符串"""
+    page = frame if hasattr(frame, "context") else frame.page
+    cdp = await page.context.new_cdp_session(page)
+    try:
+        result = await asyncio.wait_for(
+            cdp.send("Page.captureScreenshot", {"format": "png"}),
+            timeout=timeout_s,
+        )
+        return result["data"]
+    finally:
+        await cdp.detach()
+
+
+async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) -> dict[str, Any]:
+    """截图：默认 CDP 快速截图；元素截图或 full_page 时用 Playwright"""
     full_page = params.get("full_page", False)
     path = params.get("path")
-    timeout_ms = params.get("timeout", 10000)
-    timeout_s = timeout_ms / 1000
+    timeout_s = params.get("timeout", 10000) / 1000
 
     # 元素截图或 full_page 需要 Playwright
     if element or full_page:
         try:
-            kw: dict[str, Any] = {}
-            if not element:
-                kw["full_page"] = full_page
-            target = element if element else frame
-            data = await asyncio.wait_for(target.screenshot(**kw), timeout=timeout_s)
+            data = await _playwright_screenshot(
+                frame, element, full_page=full_page, timeout_s=timeout_s,
+            )
             b64 = base64.b64encode(data).decode("utf-8")
             if path:
                 with open(path, "wb") as f:
                     f.write(data)
             return {"screenshot": b64, "path": path, "full_page": full_page}
-        except (asyncio.TimeoutError, Exception):
+        except Exception:
             pass
 
     # 默认路径 / Playwright 失败后的降级：CDP 直接截图
     try:
-        page = frame if hasattr(frame, "context") else frame.page
-        cdp = await page.context.new_cdp_session(page)
-        try:
-            result = await asyncio.wait_for(
-                cdp.send("Page.captureScreenshot", {"format": "png"}),
-                timeout=timeout_s,
-            )
-            b64_str = result["data"]
-            if path:
-                import base64 as b64mod
-                with open(path, "wb") as f:
-                    f.write(b64mod.b64decode(b64_str))
-            return {"screenshot": b64_str, "path": path, "full_page": False}
-        finally:
-            await cdp.detach()
+        b64_str = await _cdp_screenshot(frame, timeout_s=timeout_s)
+        if path:
+            with open(path, "wb") as f:
+                f.write(base64.b64decode(b64_str))
+        return {"screenshot": b64_str, "path": path, "full_page": False}
     except Exception:
         pass
 

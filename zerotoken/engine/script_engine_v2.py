@@ -12,9 +12,22 @@ from typing import Any
 
 from zerotoken.models.script import Script, ScriptStep
 from zerotoken.models.session import PauseEvent, PauseReason, Resolution
-from zerotoken.models.operation import OperationRecord
+from zerotoken.models.operation import (
+    ActionType, OperationRecord, OperationResult, PageState,
+)
 from .data_flow import VarsEnvironment
 from .flow_control import FlowExecutor
+
+
+def _make_placeholder_record(
+    params: dict[str, Any], *, success: bool = True, error: str | None = None,
+) -> OperationRecord:
+    """构造 setup/skip 类步骤或错误的占位 OperationRecord"""
+    return OperationRecord(
+        step=0, action=ActionType.EVALUATE, params=params,
+        result=OperationResult(success=success, error=error),
+        page_state=PageState(),
+    )
 
 # BrowserService 动作方法映射（action 名 -> 方法名）
 _ACTION_METHOD_MAP = {
@@ -182,17 +195,9 @@ class ScriptEngineV2:
 
     async def _run_browser_action(self, step: ScriptStep) -> OperationRecord:
         """调用 BrowserService 执行一个动作步骤"""
-        from zerotoken.models.operation import (
-            OperationRecord as OR, OperationResult, PageState, ActionType,
-        )
-
         # 轨迹控制步骤自动跳过，返回成功 record
         if step.action in _SKIP_ACTIONS:
-            return OR(
-                step=0, action=ActionType.EVALUATE, params=step.params,
-                result=OperationResult(success=True),
-                page_state=PageState(),
-            )
+            return _make_placeholder_record(step.params, success=True)
 
         # 浏览器生命周期步骤，真正执行 init/close
         if step.action in _LIFECYCLE_ACTIONS:
@@ -205,38 +210,21 @@ class ScriptEngineV2:
                     )
                 elif step.action == "browser_close":
                     await self._browser.close()
-                return OR(
-                    step=0, action=ActionType.EVALUATE, params=step.params,
-                    result=OperationResult(success=True),
-                    page_state=PageState(),
-                )
+                return _make_placeholder_record(step.params, success=True)
             except Exception as e:
-                return OR(
-                    step=0, action=ActionType.EVALUATE, params=step.params,
-                    result=OperationResult(success=False, error=str(e)),
-                    page_state=PageState(),
-                )
+                return _make_placeholder_record(step.params, success=False, error=str(e))
 
         method_name = _ACTION_METHOD_MAP.get(step.action)
         if method_name is None:
-            from zerotoken.models.operation import (
-                OperationRecord as OR, OperationResult, PageState, ActionType,
-            )
-            return OR(
-                step=0, action=ActionType.EVALUATE, params=step.params,
-                result=OperationResult(success=False, error=f"Unknown action: {step.action}"),
-                page_state=PageState(),
+            return _make_placeholder_record(
+                step.params, success=False, error=f"Unknown action: {step.action}",
             )
 
         method = getattr(self._browser, method_name, None)
         if method is None:
-            from zerotoken.models.operation import (
-                OperationRecord as OR, OperationResult, PageState, ActionType,
-            )
-            return OR(
-                step=0, action=ActionType.EVALUATE, params=step.params,
-                result=OperationResult(success=False, error=f"BrowserService missing method: {method_name}"),
-                page_state=PageState(),
+            return _make_placeholder_record(
+                step.params, success=False,
+                error=f"BrowserService missing method: {method_name}",
             )
 
         try:
@@ -287,9 +275,7 @@ class ScriptEngineV2:
             else:
                 return await method(**params)
         except Exception as e:
-            from zerotoken.models.operation import (
-                OperationRecord as OR, OperationResult, PageState, ActionType,
-            )
+            # 尽量捕获当前页面状态附到错误记录上
             page_state = PageState()
             try:
                 pipeline = getattr(self._browser, "_pipeline", None)
@@ -299,7 +285,7 @@ class ScriptEngineV2:
                         page_state = ps
             except Exception:
                 pass
-            return OR(
+            return OperationRecord(
                 step=0,
                 action=ActionType.EVALUATE,
                 params=step.params,

@@ -157,78 +157,26 @@ def _err(error: str, code: str | None = None, retryable: bool = False) -> list[T
 
 # --------------- 优化提示词生成 ---------------
 
-def _build_optimize_prompt(args: dict[str, Any], script_svc: Any) -> list[TextContent]:
-    """构建脚本优化提示词，返回给 AI 分析"""
-    task_id = args["task_id"]
-    source = args.get("source", "script")
-    hints = args.get("hints", "")
+# 传给 AI 的优化指令模板（正文部分，与具体脚本无关）
+_OPTIMIZE_INSTRUCTIONS = """\
+### 请从三个方面优化此脚本
 
-    # 加载数据
-    if source == "trajectory":
-        traj_data = script_svc._trajectories.trajectory_load_by_task_id(task_id)
-        if traj_data is None:
-            return _err(f"No trajectory for task_id: {task_id}", code="TRAJECTORY_NOT_FOUND")
-        goal = traj_data.get("goal", "")
-        operations = traj_data.get("operations", [])
-        steps_text = _format_operations_for_ai(operations)
-    else:
-        script = script_svc.script_load(task_id)
-        if script is None:
-            return _err(f"No script for task_id: {task_id}", code="SCRIPT_NOT_FOUND")
-        goal = script.get("goal", "")
-        steps = script.get("steps", [])
-        steps_text = _format_steps_for_ai(steps)
+**1. 智能剪枝** -- 找出冗余步骤（如滚动后又滚回来、重复获取相同内容、失败后重试成功但两步都保留等），建议删除哪些步骤。
 
-    # 构建提示词
-    prompt_parts = [
-        f"## 脚本优化分析",
-        f"",
-        f"**Task ID:** `{task_id}`",
-        f"**Goal:** {goal}",
-        f"",
-        f"### 当前步骤",
-        f"",
-        steps_text,
-        f"",
-        f"### 请从三个方面优化此脚本",
-        f"",
-        f"**1. 智能剪枝** -- 找出冗余步骤（如滚动后又滚回来、重复获取相同内容、失败后重试成功但两步都保留等），建议删除哪些步骤。",
-        f"",
-        f"**2. 参数泛化** -- 找出应该变成参数的硬编码值（如搜索关键词、URL 中的查询参数、特定的文本内容等），建议改为 `{{{{param_name}}}}` 占位符，并给出 `params_schema`。",
-        f"",
-        f"**3. 条件分支** -- 如果有步骤可能因页面状态不同而需要走不同路径（如登录弹窗检测、元素不存在时的替代方案等），建议添加 `if` 条件步骤。",
-        f"",
-    ]
+**2. 参数泛化** -- 找出应该变成参数的硬编码值（如搜索关键词、URL 中的查询参数、特定的文本内容等），建议改为 `{{param_name}}` 占位符，并给出 `params_schema`。
 
-    if hints:
-        prompt_parts.extend([
-            f"### 用户额外提示",
-            f"",
-            f"{hints}",
-            f"",
-        ])
+**3. 条件分支** -- 如果有步骤可能因页面状态不同而需要走不同路径（如登录弹窗检测、元素不存在时的替代方案等），建议添加 `if` 条件步骤。
+"""
 
-    prompt_parts.extend([
-        f"### 输出要求",
-        f"",
-        f"分析完成后，请调用 `script_save` 保存优化后的脚本：",
-        f"- `task_id`: `\"{task_id}_optimized\"` (或用户指定的名称)",
-        f"- `goal`: 保持不变",
-        f"- `steps`: 优化后的步骤数组",
-        f"",
-        f"步骤格式支持：",
-        f"- 普通步骤: `{{\"action\": \"browser_click\", \"params\": {{\"selector\": \"#btn\"}}}}`",
-        f"- 带参数: `{{\"action\": \"browser_input\", \"params\": {{\"selector\": \"#kw\", \"text\": \"{{{{search_keyword}}}}\"}}}}`",
-        f"- 条件分支: `{{\"action\": \"if\", \"condition\": \"page_state.url.includes('login')\", \"then\": [...steps], \"else\": [...steps]}}`",
-        f"- 循环: `{{\"action\": \"loop\", \"condition\": \"...\", \"max_iterations\": 10, \"body\": [...steps]}}`",
-        f"- 赋值: `{{\"action\": \"assign\", \"var\": \"result\", \"expr\": \"...\"}}`",
-    ])
-
-    return _resp({
-        "success": True,
-        "task_id": task_id,
-        "optimization_prompt": "\n".join(prompt_parts),
-    })
+# 步骤格式说明
+_STEP_FORMAT_REFERENCE = """\
+步骤格式支持：
+- 普通步骤: `{"action": "browser_click", "params": {"selector": "#btn"}}`
+- 带参数: `{"action": "browser_input", "params": {"selector": "#kw", "text": "{{search_keyword}}"}}`
+- 条件分支: `{"action": "if", "condition": "page_state.url.includes('login')", "then": [...steps], "else": [...steps]}`
+- 循环: `{"action": "loop", "condition": "...", "max_iterations": 10, "body": [...steps]}`
+- 赋值: `{"action": "assign", "var": "result", "expr": "..."}`
+"""
 
 
 def _format_operations_for_ai(operations: list[dict]) -> str:
@@ -238,17 +186,12 @@ def _format_operations_for_ai(operations: list[dict]) -> str:
         action = op.get("action", "?")
         params = op.get("params", {})
         result = op.get("result", {})
-        success = result.get("success", True)
-        status = "OK" if success else "FAIL"
-
+        status = "OK" if result.get("success", True) else "FAIL"
         params_str = ", ".join(f"{k}={repr(v)[:60]}" for k, v in params.items())
         line = f"[{i}] [{status}] {action}({params_str})"
-
         result_data = result.get("data", {})
         if result_data:
-            preview = str(result_data)[:100]
-            line += f"  -> {preview}"
-
+            line += f"  -> {str(result_data)[:100]}"
         lines.append(line)
     return "\n".join(lines)
 
@@ -259,14 +202,72 @@ def _format_steps_for_ai(steps: list[dict]) -> str:
     for i, step in enumerate(steps, 1):
         action = step.get("action", "?")
         params = step.get("params", {})
-        assign_to = step.get("assign_to", "")
-
         params_str = ", ".join(f"{k}={repr(v)[:60]}" for k, v in params.items())
         line = f"[{i}] {action}({params_str})"
-        if assign_to:
-            line += f"  -> {assign_to}"
+        if step.get("assign_to"):
+            line += f"  -> {step['assign_to']}"
         lines.append(line)
     return "\n".join(lines)
+
+
+def _load_optimize_source(
+    task_id: str, source: str, script_svc: Any,
+) -> tuple[str, str] | tuple[None, str]:
+    """加载优化源数据，返回 (goal, steps_text)，失败返回 (None, error_code)"""
+    if source == "trajectory":
+        traj = script_svc.trajectory_load(task_id)
+        if traj is None:
+            return None, "TRAJECTORY_NOT_FOUND"
+        return traj.get("goal", ""), _format_operations_for_ai(traj.get("operations", []))
+    script = script_svc.script_load(task_id)
+    if script is None:
+        return None, "SCRIPT_NOT_FOUND"
+    return script.get("goal", ""), _format_steps_for_ai(script.get("steps", []))
+
+
+def _build_optimize_prompt(args: dict[str, Any], script_svc: Any) -> list[TextContent]:
+    """构建脚本优化提示词，返回给 AI 分析"""
+    task_id = args["task_id"]
+    source = args.get("source", "script")
+    hints = args.get("hints", "")
+
+    goal_or_none, steps_text_or_code = _load_optimize_source(task_id, source, script_svc)
+    if goal_or_none is None:
+        code = steps_text_or_code
+        kind = "trajectory" if source == "trajectory" else "script"
+        return _err(f"No {kind} for task_id: {task_id}", code=code)
+    goal, steps_text = goal_or_none, steps_text_or_code
+
+    sections = [
+        "## 脚本优化分析",
+        "",
+        f"**Task ID:** `{task_id}`",
+        f"**Goal:** {goal}",
+        "",
+        "### 当前步骤",
+        "",
+        steps_text,
+        "",
+        _OPTIMIZE_INSTRUCTIONS,
+    ]
+    if hints:
+        sections.extend(["### 用户额外提示", "", hints, ""])
+    sections.extend([
+        "### 输出要求",
+        "",
+        "分析完成后，请调用 `script_save` 保存优化后的脚本：",
+        f'- `task_id`: `"{task_id}_optimized"` (或用户指定的名称)',
+        "- `goal`: 保持不变",
+        "- `steps`: 优化后的步骤数组",
+        "",
+        _STEP_FORMAT_REFERENCE,
+    ])
+
+    return _resp({
+        "success": True,
+        "task_id": task_id,
+        "optimization_prompt": "\n".join(sections),
+    })
 
 
 # --------------- 分发 ---------------

@@ -32,10 +32,14 @@ class ScriptService:
     def script_delete(self, task_id: str) -> bool:
         return self._scripts.script_delete(task_id)
 
+    def trajectory_load(self, task_id: str) -> dict[str, Any] | None:
+        """加载已保存的轨迹数据（供优化、分析等场景使用）"""
+        return self._trajectories.trajectory_load_by_task_id(task_id)
+
     def trajectory_to_script(self, task_id: str, **kw: Any) -> str:
         """从轨迹生成脚本（复用现有 generator 逻辑）"""
         from zerotoken.engine.script_generator import save_script_from_trajectory
-        traj_data = self._trajectories.trajectory_load_by_task_id(task_id)
+        traj_data = self.trajectory_load(task_id)
         if traj_data is None:
             raise ValueError(f"No trajectory for task_id: {task_id}")
         return save_script_from_trajectory(
