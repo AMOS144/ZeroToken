@@ -69,6 +69,20 @@ MIGRATIONS: list[tuple[str, str]] = [
         );
     """,
     ),
+    (
+        "002_script_health",
+        """
+        ALTER TABLE scripts ADD COLUMN status TEXT DEFAULT 'active';
+        ALTER TABLE scripts ADD COLUMN consecutive_failures INTEGER DEFAULT 0;
+        ALTER TABLE scripts ADD COLUMN total_runs INTEGER DEFAULT 0;
+        ALTER TABLE scripts ADD COLUMN total_completed INTEGER DEFAULT 0;
+        ALTER TABLE scripts ADD COLUMN last_run_at TEXT;
+        ALTER TABLE scripts ADD COLUMN last_run_status TEXT;
+        ALTER TABLE scripts ADD COLUMN last_session_id TEXT;
+        ALTER TABLE scripts ADD COLUMN deprecated_at TEXT;
+        ALTER TABLE scripts ADD COLUMN deprecated_reason TEXT;
+        """,
+    ),
 ]
 
 
