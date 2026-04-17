@@ -39,9 +39,10 @@ def script_tools() -> list[Tool]:
         ),
         Tool(
             name="script_list",
-            description="List scripts in the database",
+            description="List scripts in the database (default: only active)",
             inputSchema=_obj_schema({
                 "limit": {"type": "integer", "description": "Max number to return", "default": 100},
+                "status": {"type": "string", "description": "Filter by status: active / warning / deprecated / all (default: active)"},
             }),
         ),
         Tool(
@@ -49,6 +50,28 @@ def script_tools() -> list[Tool]:
             description="Delete a script by task_id",
             inputSchema=_obj_schema({
                 "task_id": {"type": "string"},
+            }, required=["task_id"]),
+        ),
+        Tool(
+            name="script_deprecate",
+            description="Mark a script as deprecated (soft delete). Deprecated scripts are excluded from script_list by default and rejected by script_run.",
+            inputSchema=_obj_schema({
+                "task_id": {"type": "string", "description": "Task ID to deprecate"},
+                "reason": {"type": "string", "description": "Why the script is being deprecated"},
+            }, required=["task_id"]),
+        ),
+        Tool(
+            name="script_restore",
+            description="Restore a deprecated script to active status",
+            inputSchema=_obj_schema({
+                "task_id": {"type": "string", "description": "Task ID to restore"},
+            }, required=["task_id"]),
+        ),
+        Tool(
+            name="script_health",
+            description="Get script health metrics: status, consecutive failures, total runs, success rate",
+            inputSchema=_obj_schema({
+                "task_id": {"type": "string", "description": "Task ID"},
             }, required=["task_id"]),
         ),
         # -- 脚本生成 --
@@ -293,7 +316,10 @@ async def handle_script_tool(
             return _resp({"success": True, "script": script})
 
         if name == "script_list":
-            items = script_svc.script_list(limit=args.get("limit", 100))
+            items = script_svc.script_list(
+                limit=args.get("limit", 100),
+                status=args.get("status", "active"),
+            )
             return _resp({"scripts": items})
 
         if name == "script_delete":
@@ -302,6 +328,39 @@ async def handle_script_tool(
             except ValueError as e:
                 return _err(str(e), code="SCRIPT_HAS_BINDINGS")
             return _resp({"success": True, **result})
+
+        if name == "script_deprecate":
+            try:
+                result = script_svc.script_deprecate(
+                    args["task_id"], reason=args.get("reason", ""),
+                )
+            except KeyError:
+                return _err(
+                    f"No script for task_id: {args['task_id']}",
+                    code="SCRIPT_NOT_FOUND",
+                )
+            return _resp({"success": True, **result})
+
+        if name == "script_restore":
+            try:
+                result = script_svc.script_restore(args["task_id"])
+            except KeyError:
+                return _err(
+                    f"No script for task_id: {args['task_id']}",
+                    code="SCRIPT_NOT_FOUND",
+                )
+            except ValueError as e:
+                return _err(str(e), code="SCRIPT_NOT_DEPRECATED")
+            return _resp({"success": True, **result})
+
+        if name == "script_health":
+            result = script_svc.script_health(args["task_id"])
+            if result is None:
+                return _err(
+                    f"No script for task_id: {args['task_id']}",
+                    code="SCRIPT_NOT_FOUND",
+                )
+            return _resp({"success": True, "health": result})
 
         # -- 生成 --
         if name == "script_generate":
