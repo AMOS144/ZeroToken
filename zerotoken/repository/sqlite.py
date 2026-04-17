@@ -85,13 +85,35 @@ class SQLiteScriptRepo:
             "updated_at": row["updated_at"],
         }
 
-    def script_list(self, limit: int = 100) -> list[dict[str, Any]]:
-        rows = self.conn.execute(
-            "SELECT task_id, goal, created_at FROM scripts ORDER BY updated_at DESC LIMIT ?",
-            (limit,),
-        ).fetchall()
+    def script_list(
+        self,
+        limit: int = 100,
+        status: str = "active",
+    ) -> list[dict[str, Any]]:
+        if status == "all":
+            sql = (
+                "SELECT task_id, goal, status, consecutive_failures, "
+                "last_run_status, created_at FROM scripts "
+                "ORDER BY updated_at DESC LIMIT ?"
+            )
+            params: tuple = (limit,)
+        else:
+            sql = (
+                "SELECT task_id, goal, status, consecutive_failures, "
+                "last_run_status, created_at FROM scripts "
+                "WHERE status = ? ORDER BY updated_at DESC LIMIT ?"
+            )
+            params = (status, limit)
+        rows = self.conn.execute(sql, params).fetchall()
         return [
-            {"task_id": r["task_id"], "goal": r["goal"], "created_at": r["created_at"]}
+            {
+                "task_id": r["task_id"],
+                "goal": r["goal"],
+                "status": r["status"],
+                "consecutive_failures": r["consecutive_failures"],
+                "last_run_status": r["last_run_status"],
+                "created_at": r["created_at"],
+            }
             for r in rows
         ]
 
@@ -99,6 +121,119 @@ class SQLiteScriptRepo:
         cur = self.conn.execute("DELETE FROM scripts WHERE task_id=?", (task_id,))
         self.conn.commit()
         return cur.rowcount > 0
+
+    _HEALTH_COLUMNS = (
+        "task_id",
+        "status",
+        "consecutive_failures",
+        "total_runs",
+        "total_completed",
+        "last_run_at",
+        "last_run_status",
+        "last_session_id",
+        "deprecated_at",
+        "deprecated_reason",
+    )
+
+    def health(self, task_id: str) -> dict[str, Any] | None:
+        """返回脚本的健康指标快照"""
+        cols = ", ".join(self._HEALTH_COLUMNS)
+        row = self.conn.execute(
+            f"SELECT {cols} FROM scripts WHERE task_id=?",
+            (task_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        total = row["total_runs"] or 0
+        success = row["total_completed"] or 0
+        return {
+            "task_id": row["task_id"],
+            "status": row["status"],
+            "consecutive_failures": row["consecutive_failures"] or 0,
+            "total_runs": total,
+            "total_completed": success,
+            "success_rate": round(success / total, 4) if total else 0.0,
+            "last_run_at": row["last_run_at"],
+            "last_run_status": row["last_run_status"],
+            "last_session_id": row["last_session_id"],
+            "deprecated_at": row["deprecated_at"],
+            "deprecated_reason": row["deprecated_reason"],
+        }
+
+    def record_run_result(
+        self,
+        task_id: str,
+        terminal_status: str,
+        session_id: str,
+    ) -> dict[str, Any]:
+        """在脚本执行到达终态时更新统计。
+        terminal_status: completed / failed / aborted
+        连续 5 次非 completed 自动把 active 升级为 warning。
+        一次 completed 把 warning 降回 active 并清零 consecutive_failures。
+        """
+        now = _now_iso()
+        is_success = terminal_status == "completed"
+        if is_success:
+            self.conn.execute(
+                """UPDATE scripts SET
+                    consecutive_failures = 0,
+                    total_runs = total_runs + 1,
+                    total_completed = total_completed + 1,
+                    last_run_at = ?, last_run_status = ?, last_session_id = ?,
+                    status = CASE WHEN status = 'warning' THEN 'active' ELSE status END,
+                    updated_at = ?
+                   WHERE task_id = ?""",
+                (now, terminal_status, session_id, now, task_id),
+            )
+        else:
+            self.conn.execute(
+                """UPDATE scripts SET
+                    consecutive_failures = consecutive_failures + 1,
+                    total_runs = total_runs + 1,
+                    last_run_at = ?, last_run_status = ?, last_session_id = ?,
+                    status = CASE
+                        WHEN status = 'active' AND consecutive_failures + 1 >= 5
+                        THEN 'warning' ELSE status
+                    END,
+                    updated_at = ?
+                   WHERE task_id = ?""",
+                (now, terminal_status, session_id, now, task_id),
+            )
+        self.conn.commit()
+        return self.health(task_id) or {}
+
+    def deprecate(self, task_id: str, *, reason: str = "") -> dict[str, Any]:
+        """标记脚本为 deprecated"""
+        now = _now_iso()
+        cur = self.conn.execute(
+            """UPDATE scripts SET status='deprecated',
+               deprecated_at=?, deprecated_reason=?, updated_at=?
+               WHERE task_id=?""",
+            (now, reason, now, task_id),
+        )
+        if cur.rowcount == 0:
+            raise KeyError(f"script not found: {task_id}")
+        self.conn.commit()
+        return self.health(task_id) or {}
+
+    def restore(self, task_id: str) -> dict[str, Any]:
+        """将 deprecated 脚本恢复为 active"""
+        h = self.health(task_id)
+        if h is None:
+            raise KeyError(f"script not found: {task_id}")
+        if h["status"] != "deprecated":
+            raise ValueError(f"script {task_id} is not deprecated")
+        now = _now_iso()
+        self.conn.execute(
+            """UPDATE scripts SET status='active',
+               consecutive_failures=0,
+               deprecated_at=NULL, deprecated_reason=NULL,
+               updated_at=?
+               WHERE task_id=?""",
+            (now, task_id),
+        )
+        self.conn.commit()
+        return self.health(task_id) or {}
 
 
 class SQLiteTrajectoryRepo:
