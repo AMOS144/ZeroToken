@@ -297,8 +297,11 @@ async def handle_script_tool(
             return _resp({"scripts": items})
 
         if name == "script_delete":
-            ok = script_svc.script_delete(args["task_id"])
-            return _resp({"success": True, "deleted": ok})
+            try:
+                result = script_svc.script_delete(args["task_id"])
+            except ValueError as e:
+                return _err(str(e), code="SCRIPT_HAS_BINDINGS")
+            return _resp({"success": True, **result})
 
         # -- 生成 --
         if name == "script_generate":

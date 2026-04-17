@@ -120,3 +120,51 @@ def test_deprecate_missing_raises(repo):
 def test_restore_non_deprecated_raises(repo):
     with pytest.raises(ValueError, match="not deprecated"):
         repo.restore("t1")
+
+
+def test_script_delete_cascades_sessions(tmp_path):
+    """删除脚本时应级联清理 session_headers / session_runtime"""
+    from zerotoken.repository.sqlite import (
+        SQLiteRuntimeRepo,
+        SQLiteScriptRepo,
+        SQLiteSessionRepo,
+        new_connection,
+    )
+
+    db = str(tmp_path / "t.db")
+    conn = new_connection(db)
+    scripts = SQLiteScriptRepo(conn)
+    sessions = SQLiteSessionRepo(conn)
+    runtime = SQLiteRuntimeRepo(conn)
+
+    scripts.script_save("t1", goal="g", steps=[])
+    sessions.session_start("s1", task_id="t1")
+    runtime.runtime_init("s1", task_id="t1", cursor_step_index=0, status="running")
+
+    result = scripts.script_delete("t1")
+    assert result["deleted"] is True
+    assert result["cascade"]["session_headers"] == 1
+    assert result["cascade"]["session_runtime"] == 1
+
+    assert sessions.session_list() == []
+    assert runtime.runtime_get("s1") is None
+
+
+def test_script_delete_blocked_by_binding(tmp_path):
+    """存在 script_bindings 引用时不允许删除脚本"""
+    from zerotoken.repository.sqlite import (
+        SQLiteBindingRepo,
+        SQLiteScriptRepo,
+        new_connection,
+    )
+
+    db = str(tmp_path / "t.db")
+    conn = new_connection(db)
+    scripts = SQLiteScriptRepo(conn)
+    bindings = SQLiteBindingRepo(conn)
+
+    scripts.script_save("t1", goal="g", steps=[])
+    bindings.binding_set("job-1", script_task_id="t1")
+
+    with pytest.raises(ValueError, match="has bindings"):
+        scripts.script_delete("t1")

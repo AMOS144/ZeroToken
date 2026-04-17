@@ -1,4 +1,6 @@
 """SQLiteSessionRepo + SQLiteRuntimeRepo 测试"""
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 
@@ -56,3 +58,61 @@ def test_runtime_get_not_found(runtime_repo):
 def test_runtime_update_not_found(runtime_repo):
     with pytest.raises(KeyError):
         runtime_repo.runtime_update("nope", status="x")
+
+
+def test_find_paused_before_returns_stale(tmp_path):
+    """paused 且 updated_at 早于 cutoff 的会话应被找出"""
+    from zerotoken.repository.sqlite import SQLiteRuntimeRepo, new_connection
+
+    db = str(tmp_path / "t.db")
+    conn = new_connection(db)
+    runtime = SQLiteRuntimeRepo(conn)
+
+    runtime.runtime_init("s1", task_id="t1", cursor_step_index=0, status="paused")
+    runtime.runtime_init("s2", task_id="t1", cursor_step_index=0, status="running")
+
+    old = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    conn.execute("UPDATE session_runtime SET updated_at=? WHERE session_id=?", (old, "s1"))
+    conn.commit()
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    stale = runtime.find_paused_before("t1", cutoff)
+    ids = [s["session_id"] for s in stale]
+    assert ids == ["s1"]
+
+
+def test_find_paused_before_ignores_running(tmp_path):
+    """running 状态不应被视为遗弃，即使时间很久"""
+    from zerotoken.repository.sqlite import SQLiteRuntimeRepo, new_connection
+
+    db = str(tmp_path / "t.db")
+    conn = new_connection(db)
+    runtime = SQLiteRuntimeRepo(conn)
+
+    runtime.runtime_init("s1", task_id="t1", cursor_step_index=0, status="running")
+    old = (datetime.now(timezone.utc) - timedelta(hours=100)).isoformat()
+    conn.execute("UPDATE session_runtime SET updated_at=? WHERE session_id=?", (old, "s1"))
+    conn.commit()
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    stale = runtime.find_paused_before("t1", cutoff)
+    assert stale == []
+
+
+def test_find_paused_before_filters_by_task_id(tmp_path):
+    from zerotoken.repository.sqlite import SQLiteRuntimeRepo, new_connection
+
+    db = str(tmp_path / "t.db")
+    conn = new_connection(db)
+    runtime = SQLiteRuntimeRepo(conn)
+
+    runtime.runtime_init("s1", task_id="t1", cursor_step_index=0, status="paused")
+    runtime.runtime_init("s2", task_id="t2", cursor_step_index=0, status="paused")
+    old = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    conn.execute("UPDATE session_runtime SET updated_at=?", (old,))
+    conn.commit()
+
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    stale = runtime.find_paused_before("t1", cutoff)
+    ids = [s["session_id"] for s in stale]
+    assert ids == ["s1"]

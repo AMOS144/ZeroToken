@@ -47,9 +47,11 @@ def test_list(repo):
 
 def test_delete(repo):
     repo.script_save("t1", goal="g", steps=[])
-    assert repo.script_delete("t1") is True
+    r1 = repo.script_delete("t1")
+    assert r1["deleted"] is True
     assert repo.script_load("t1") is None
-    assert repo.script_delete("t1") is False
+    r2 = repo.script_delete("t1")
+    assert r2["deleted"] is False
 
 
 def test_save_with_source_trajectory_id(repo):

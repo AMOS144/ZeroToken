@@ -29,7 +29,7 @@ class ScriptService:
     def script_list(self, limit: int = 100) -> list[dict[str, Any]]:
         return self._scripts.script_list(limit=limit)
 
-    def script_delete(self, task_id: str) -> bool:
+    def script_delete(self, task_id: str) -> dict[str, Any]:
         return self._scripts.script_delete(task_id)
 
     def trajectory_load(self, task_id: str) -> dict[str, Any] | None:

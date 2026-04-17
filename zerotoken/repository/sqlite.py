@@ -117,10 +117,61 @@ class SQLiteScriptRepo:
             for r in rows
         ]
 
-    def script_delete(self, task_id: str) -> bool:
-        cur = self.conn.execute("DELETE FROM scripts WHERE task_id=?", (task_id,))
+    def script_delete(self, task_id: str) -> dict[str, Any]:
+        """硬删除脚本 + 级联清理 session 数据。
+        若存在 script_bindings 引用此 task_id，抛 ValueError（应先删 binding）。
+        """
+        has_binding = self.conn.execute(
+            "SELECT 1 FROM script_bindings WHERE script_task_id=? LIMIT 1",
+            (task_id,),
+        ).fetchone()
+        if has_binding:
+            raise ValueError(
+                f"script {task_id} has bindings; delete them first via script_bind_delete"
+            )
+
+        session_rows = self.conn.execute(
+            "SELECT session_id FROM session_headers WHERE task_id=?",
+            (task_id,),
+        ).fetchall()
+        session_ids = [r["session_id"] for r in session_rows]
+
+        steps_deleted = 0
+        runtime_deleted = 0
+        for sid in session_ids:
+            cur = self.conn.execute(
+                "DELETE FROM session_steps WHERE session_id=?",
+                (sid,),
+            )
+            steps_deleted += cur.rowcount
+            cur = self.conn.execute(
+                "DELETE FROM session_runtime WHERE session_id=?",
+                (sid,),
+            )
+            runtime_deleted += cur.rowcount
+
+        headers_cur = self.conn.execute(
+            "DELETE FROM session_headers WHERE task_id=?",
+            (task_id,),
+        )
+        orphan_cur = self.conn.execute(
+            "DELETE FROM session_runtime WHERE task_id=?",
+            (task_id,),
+        )
+
+        script_cur = self.conn.execute(
+            "DELETE FROM scripts WHERE task_id=?",
+            (task_id,),
+        )
         self.conn.commit()
-        return cur.rowcount > 0
+        return {
+            "deleted": script_cur.rowcount > 0,
+            "cascade": {
+                "session_headers": headers_cur.rowcount,
+                "session_steps": steps_deleted,
+                "session_runtime": runtime_deleted + orphan_cur.rowcount,
+            },
+        }
 
     _HEALTH_COLUMNS = (
         "task_id",
@@ -483,6 +534,24 @@ class SQLiteRuntimeRepo:
             ),
         )
         self.conn.commit()
+
+    def find_paused_before(
+        self, task_id: str, cutoff_iso: str
+    ) -> list[dict[str, Any]]:
+        """返回指定 task_id 下 status='paused' 且 updated_at < cutoff_iso 的 session。"""
+        rows = self.conn.execute(
+            """SELECT session_id, task_id, updated_at FROM session_runtime
+               WHERE task_id=? AND status='paused' AND updated_at < ?""",
+            (task_id, cutoff_iso),
+        ).fetchall()
+        return [
+            {
+                "session_id": r["session_id"],
+                "task_id": r["task_id"],
+                "updated_at": r["updated_at"],
+            }
+            for r in rows
+        ]
 
 
 class SQLiteFingerprintRepo:

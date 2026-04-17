@@ -19,7 +19,7 @@ class ScriptRepo(Protocol):
 
     def script_list(self, limit: int = 100) -> list[dict[str, Any]]: ...
 
-    def script_delete(self, task_id: str) -> bool: ...
+    def script_delete(self, task_id: str) -> dict[str, Any]: ...
 
 
 class TrajectoryRepo(Protocol):
@@ -83,6 +83,10 @@ class RuntimeRepo(Protocol):
     def runtime_get(self, session_id: str) -> dict[str, Any] | None: ...
 
     def runtime_update(self, session_id: str, **fields: Any) -> None: ...
+
+    def find_paused_before(
+        self, task_id: str, cutoff_iso: str
+    ) -> list[dict[str, Any]]: ...
 
 
 class FingerprintRepo(Protocol):
