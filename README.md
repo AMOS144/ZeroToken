@@ -120,15 +120,21 @@ AI Agent 直接控制浏览器执行重复任务时，每次都需要消耗大�
 
 ## 核心特性
 
-- **完整轨迹记录** - 每次操作记录步骤、页面状态、截图
-- **结构化操作记录** - OperationRecord 包含完整的执行上下文
-- **模糊点/DFU 标记** - 显式标记需 AI/人判断或需要上层决策/产出 vars 的步骤（如验证码、多选链接、评论文案），含 reason 与 hint
-- **Script Engine** - 从 SQLite 数据库中的脚本表读取脚本，提供无 LLM 的确定性回放（`run_script`），支持暂停（dfu_pause/step_failed）与恢复（resolution）
-- **SQLite 存储** - **scripts / trajectories / sessions 三类数据全部入库**，便于查询、复盘与定时任务调度
-- **MCP 协议** - 标准化接口，易于集成到各种 AI Agent
-- **稳定性增强** - 智能选择器、等待策略、错误恢复三大模块
+- **分层架构** - Transport → Handler → Service → Domain → Repository/Infrastructure 五层，Pydantic v2 强类型模型
+- **完整轨迹记录** - 每次操作记录步骤、页面状态、截图，结构化 OperationRecord
+- **多标签页与 iframe** - 内置 BrowserContextManager，支持多 tab 切换、iframe 进入/退出、独立指纹与状态
+- **丰富的浏览器原子操作** - 26 个 browser_* 工具：导航、点击/输入/hover/键盘/滚动/拖拽、文件上传下载、JS 求值、截图等
+- **Script Engine** - 可嵌套步骤树 + VarsEnvironment，支持 if/loop/assign 流程控制、变量传递、白名单 AST 安全表达式、循环上限保护
+- **Step-as-Unit 错误处理** - 任意步骤失败/需判断时暂停（pause），AI 通过 resolution 决定 retry/skip/patch/abort
+- **录制探索模式** - `trajectory_explore_start/stop` 隔离 AI 试错路径，避免污染轨迹
+- **Token 优化** - DOM 智能剪枝、截图压缩/裁剪/降质、页面状态摘要，多层次降低 Token 消耗
+- **SQLite 存储** - scripts / trajectories / sessions / fingerprints / bindings / runtime 按职责拆分 Repo，版本化迁移
+- **脚本生命周期管理** - script_deprecate/restore/health，自动跟踪连续失败、计算成功率
+- **任务绑定** - script_bind 把外部 job_id 映射到脚本，便于 OpenClaw 等定时任务调度
+- **稳定性增强** - SmartSelector（多备选 + 不稳定模式过滤）、SmartWait（多等待条件级联）、ErrorRecovery（指数退避 + 选择器变体 + iframe 内查找）
 - **自适应元素定位** - 首次命中时保存元素指纹（auto_save），改版后选择器失效时按相似度重定位（adaptive），无需改代码
-- **反爬/云盾应对** - `browser_init(stealth=true)` 启用隐蔽启动与指纹伪装，降低被识别为自动化浏览器的概率（先能抓得到，Cloudflare 过验证后续可选）
+- **反爬/云盾应对** - `browser_init(stealth=true)` 启用隐蔽启动与指纹伪装，降低被识别为自动化浏览器的概率
+- **MCP 协议** - stdio + Streamable HTTP 双 transport，handlers/ 模块化注册
 
 ## 稳定性增强
 
@@ -159,100 +165,95 @@ AI Agent 直接控制浏览器执行重复任务时，每次都需要消耗大�
 - 指数退避重试
 - iframe 内元素查找
 
-## 系统架构（含 ScriptEngine 与 DB 存储）
+## 系统架构
+
+五层分层，依赖方向**单向向下**：Handler → Service → Domain / Repository / Infrastructure，绝不反向。
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     AI Agent (ReAct 模式)                    │
-│  系统提示词：分步推理 → 调用 MCP → 分析结果 → 下一步          │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ MCP 工具调用
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  ZeroToken MCP Server                        │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Browser Tools (原子能力层)                            │   │
-│  │  - browser_open(url) → OperationRecord               │   │
-│  │  - browser_click(selector) → OperationRecord         │   │
-│  │  - browser_input(selector, text) → OperationRecord   │   │
-│  │  - browser_get_text(selector) → OperationRecord      │   │
-│  │  - browser_extract_data(schema) → OperationRecord    │   │
-│  │  ...                                                  │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Trajectory Tools (轨迹管理)                           │   │
-│  │  - trajectory_start(task_id, goal)                   │   │
-│  │  - trajectory_complete() → AI Prompt (含模糊点)       │   │
-│  │  - trajectory_get(format=json|ai_prompt) 当前轨迹      │   │
-│  │  - trajectory_list(limit?, since?) 已保存列表         │   │
-│  │  - trajectory_load(task_id, format?) 按 task_id 加载  │   │
-│  │  - trajectory_delete(task_id) 删除已保存轨迹          │   │
-│  └──────────────────────────────────────────────────────┘   │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │  Script / Session Tools                              │   │
-│  │  - script_save / script_load / script_list          │   │
-│  │  - run_script(task_id, vars?) → 确定性回放           │   │
-│  │  - session_list / session_get(session_id)           │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 OperationRecord (结构化记录)                  │
-│  {                                                            │
-│    "step": 1,                                                │
-│    "action": "click",                                        │
-│    "params": {"selector": "#login-btn"},                     │
-│    "result": {"success": true, "navigated": true},           │
-│    "page_state": {"url": "...", "title": "..."},             │
-│    "screenshot": "base64...",  ← 视觉快照                     │
-│    "fuzzy_point": {         ← 可选，需判断时存在               │
-│      "requires_judgment": true,                              │
-│      "reason": "验证码需识别", "hint": "AI 视觉"               │
-│    },                                                         │
-│    "timestamp": "2024-01-01T12:00:00"                        │
-│  }                                                            │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│  Transport       MCP stdio  /  Streamable HTTP                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Handler         handlers/{browser,trajectory,script}_handlers   │
+│                  (工具注册 + 参数校验 + 调度)                     │
+├─────────────────────────────────────────────────────────────────┤
+│  Service         BrowserService  TrajectoryService  ScriptService│
+│                  (业务编排, 无框架依赖)                           │
+├─────────────────────────────────────────────────────────────────┤
+│  Domain          Pydantic 模型 (OperationRecord, Trajectory,     │
+│                  Script, Session, Resolution, ...)               │
+├──────────────────────────────────┬──────────────────────────────┤
+│  Repository                      │  Infrastructure              │
+│  Protocol 抽象 + SQLite 实现     │  browser/  ActionPipeline    │
+│  ScriptRepo / TrajectoryRepo /   │            + actions/        │
+│  SessionRepo / RuntimeRepo /     │            + stability/      │
+│  FingerprintRepo / BindingRepo   │  engine/   ScriptEngine      │
+│                                  │            + flow_control    │
+│                                  │            + data_flow       │
+│                                  │  optimizers/ DOM/Screenshot/ │
+│                                  │              StateSummary    │
+└──────────────────────────────────┴──────────────────────────────┘
 ```
 
 ### Mermaid 架构图
 
 ```mermaid
 graph TB
-    subgraph "AI Agent Layer"
-        A[AI Agent - ReAct Mode]
+    subgraph "Client"
+        A[AI Agent / OpenClaw / Cursor]
     end
 
-    subgraph "MCP Server"
-        B1[Browser Tools]
-        B2[Trajectory Tools]
+    subgraph "Transport"
+        T1[MCP stdio]
+        T2[Streamable HTTP]
     end
 
-    subgraph "Core Modules"
-        C1[BrowserController]
-        C2[TrajectoryRecorder]
-        C3[ScriptEngine]
+    subgraph "Handler"
+        H1[browser_handlers]
+        H2[trajectory_handlers]
+        H3[script_handlers]
     end
 
-    subgraph "Storage"
-        D1["SQLite: scripts/trajectories/sessions"]
+    subgraph "Service"
+        S1[BrowserService]
+        S2[TrajectoryService]
+        S3[ScriptService]
     end
 
-    subgraph "Browser"
-        E[Playwright/Chromium]
+    subgraph "Infrastructure"
+        I1[ActionPipeline + actions/]
+        I2[Stability: Selector/Wait/Recovery/Adaptive]
+        I3[ScriptEngine: flow_control + data_flow]
+        I4[Optimizers: DOM / Screenshot / StateSummary]
     end
 
-    A -->|MCP Calls| B1
-    A -->|MCP Calls| B2
+    subgraph "Repository"
+        R1[ScriptRepo]
+        R2[TrajectoryRepo]
+        R3[SessionRepo]
+        R4[RuntimeRepo]
+        R5[FingerprintRepo]
+        R6[BindingRepo]
+    end
 
-    B1 --> C1
-    B2 --> C2
+    subgraph "Storage / Browser"
+        DB[(SQLite zerotoken.db)]
+        PW[Playwright / Chromium]
+    end
 
-    C1 --> E
-    C1 --> C2
-    C2 --> D1
-    C3 --> D1
+    A --> T1
+    A --> T2
+    T1 --> H1 & H2 & H3
+    T2 --> H1 & H2 & H3
+    H1 --> S1
+    H2 --> S2
+    H3 --> S3
+    S1 --> I1 --> I2
+    S2 --> R2
+    S3 --> I3 --> I4
+    S3 --> R1 & R3 & R4 & R6
+    S1 --> R5
+    I1 --> PW
+    R1 & R2 & R3 & R4 & R5 & R6 --> DB
 ```
 
 ## 安装
@@ -333,66 +334,91 @@ zerotoken-mcp
 
 AI 收到 `ai_prompt` 后，可结合 Skills 或自定义逻辑，对标记为「需判断」的步骤进行处理。建议通过 `trajectory_list` 查看已保存轨迹，对不需要的调用 `trajectory_delete(task_id)` 避免记录过多；browser 类工具可传 `include_screenshot: false` 减少响应体积；失败时返回结构化错误（含 `code`、`retryable`）便于模型重试。对关键元素可传 `auto_save: true` 保存指纹，改版后传 `adaptive: true` 自动重定位。
 
-## 核心模块 API
+### 3. 更多浏览器操作
 
-### BrowserController
+**多标签页与 iframe**：
 
-```python
-from zerotoken import BrowserController
-
-controller = BrowserController()
-await controller.start(headless=True)
-
-# 每个操作都返回 OperationRecord
-record = await controller.open("https://example.com")
-print(record.to_dict())
-# {
-#   "step": 1,
-#   "action": "open",
-#   "params": {...},
-#   "result": {...},
-#   "page_state": {...},
-#   "screenshot": "base64..."
-# }
-
-await controller.stop()
+```
+→ browser_new_tab(url="https://second.example.com")     # 返回 tab_id
+→ browser_list_tabs()                                    # 列出所有 tab
+→ browser_switch_tab(tab_id=1)
+→ browser_enter_iframe(selector="iframe#payment")
+→ browser_click(selector="#confirm")                    # 在 iframe 内
+→ browser_exit_iframe()
+→ browser_close_tab(tab_id=1)
 ```
 
-### TrajectoryRecorder
+**文件 / 键盘 / 高级交互**：
 
-```python
-from zerotoken import TrajectoryRecorder, BrowserController
-
-controller = BrowserController()
-recorder = TrajectoryRecorder()
-recorder.bind_controller(controller)
-
-# 开始记录
-recorder.start_trajectory("task_001", "完成用户登录")
-
-# 执行操作（自动记录）
-await controller.open("https://example.com")
-await controller.click("#login-btn")
-
-# 完成记录
-trajectory = recorder.complete_trajectory()
-recorder.save_trajectory()
-
-# 导出给 AI 分析（含模糊点标记）
-ai_prompt = trajectory.to_ai_prompt_format()
+```
+→ browser_upload(selector="input[type=file]", file_path="/tmp/a.pdf")
+→ browser_download(selector="a.export")                  # 返回保存路径
+→ browser_keyboard(key="Control+S")
+→ browser_hover(selector=".menu")
+→ browser_drag_drop(source="#item", target="#bin")
+→ browser_scroll(direction="down", amount=800)
+→ browser_evaluate(expression="document.title")
 ```
 
-### 模糊点标记 (fuzzy_point)
+**录制探索模式（试错时不污染轨迹）**：
 
-需要 AI 或人工判断的步骤可标记为模糊点：
+```
+→ trajectory_explore_start(reason="尝试不同入口")
+→ browser_click(...)        # 这些步骤不会进入正式轨迹
+→ browser_click(...)
+→ trajectory_explore_stop(keep="none")    # none / last / all
+→ browser_click("#correct-entry")          # 之后回到正式录入
+```
+
+**脚本生成与回放**：
+
+```
+→ script_generate(task_id="login_demo")                  # 由轨迹生成脚本
+→ script_run(task_id="login_demo", vars={"user": "..."}) # 确定性回放
+                                                          # 失败/需判断会暂停 → session
+→ script_resume(session_id="...", resolution={"type": "retry"})
+                                                          # 或 skip / patch / abort
+→ script_health(task_id="login_demo")                    # 连续失败/成功率
+→ script_deprecate(task_id="login_demo", reason="改版失效")
+→ script_restore(task_id="login_demo")
+```
+
+**绑定外部 job_id（OpenClaw 定时任务）**：
+
+```
+→ script_bind(binding_key="daily-report", script_task_id="report_v3",
+              default_vars={"date": "today"})
+→ script_run(... )    # 通过 binding_key 间接触发
+```
+
+## Python API
+
+主要使用方式是 MCP 工具调用。也可以直接在 Python 中使用底层 service：
 
 ```python
-# extract_data 默认自动标记 fuzzy_point
-record = await controller.extract_data(schema)
+from zerotoken import BrowserService, TrajectoryService, ScriptService
+from zerotoken.repository.sqlite import open_sqlite_repos
 
-# 其他操作可手动传入 fuzzy_reason、fuzzy_hint
-record = await controller.click("#link", fuzzy_reason="页面有多个链接", fuzzy_hint="需选择目标链接")
+# 打开按职责拆分的仓库集合（共享一个 SQLite 文件）
+repos = open_sqlite_repos("zerotoken.db")
+
+browser = BrowserService()
+await browser.init(headless=True)
+
+trajectory = TrajectoryService(trajectory_repo=repos.trajectory)
+trajectory.start("task_001", goal="登录系统")
+trajectory.bind(browser)
+
+await browser.open("https://example.com/login")
+await browser.click("#submit")
+
+result = trajectory.complete(export_for_ai=True)
+print(result["ai_prompt"])
+
+await browser.close()
 ```
+
+> 公开导出：`BrowserService` / `TrajectoryService` / `ScriptService`，以及全部 Pydantic 模型（`OperationRecord` / `Trajectory` / `Script` / `Resolution` 等）。具体函数签名见 `zerotoken/services/`。
 
 ## OperationRecord 结构
 
@@ -432,17 +458,46 @@ record = await controller.click("#link", fuzzy_reason="页面有多个链接", f
 
 ```
 zerotoken/
-├── zerotoken/
-│   ├── __init__.py
-│   ├── controller.py         # BrowserController - 浏览器控制
-│   ├── trajectory.py         # TrajectoryRecorder - 轨迹记录
-│   ├── selector.py           # SmartSelector - 智能选择器
-│   ├── wait_strategy.py      # SmartWait - 等待策略
-│   └── recovery.py           # ErrorRecovery - 错误恢复
-├── zerotoken.db              # SQLite 数据库（脚本/轨迹/会话，运行时生成）
-├── mcp_server.py             # MCP Server 入口（stdio）
-├── mcp_server_http.py        # MCP Server HTTP 入口（Streamable HTTP）
-└── README.md
+├── zerotoken/                       # 库主体
+│   ├── __init__.py                  # 公开导出 services 与 Pydantic 模型
+│   ├── models/                      # Domain 层 - Pydantic v2 模型
+│   │   ├── operation.py             #   OperationRecord, PageState, ActionType, ...
+│   │   ├── trajectory.py            #   Trajectory, TrajectoryMetadata
+│   │   ├── script.py                #   Script, ScriptStep, StepHint
+│   │   └── session.py               #   PauseEvent, Resolution, RuntimeState
+│   ├── services/                    # Service 层 - 业务编排
+│   │   ├── browser_service.py
+│   │   ├── trajectory_service.py    #   含 RecordingMode（探索模式）
+│   │   └── script_service.py        #   含 deprecate/restore/health
+│   ├── repository/                  # Repository 层 - 按职责拆分
+│   │   ├── protocols.py             #   Protocol 抽象
+│   │   ├── sqlite.py                #   SQLite 实现
+│   │   └── migrations.py            #   版本化迁移
+│   ├── browser/                     # Infrastructure - 浏览器
+│   │   ├── context.py               #   BrowserContextManager（多标签）
+│   │   ├── pipeline.py              #   ActionPipeline
+│   │   ├── actions/                 #   navigate/interact/extract/page_mgmt/iframe/file_ops
+│   │   ├── stability/               #   middleware/selector/wait/recovery/adaptive
+│   │   └── stealth.py
+│   ├── engine/                      # Infrastructure - 脚本引擎
+│   │   ├── script_engine_v2.py      #   执行器
+│   │   ├── flow_control.py          #   if/loop/assign
+│   │   ├── data_flow.py             #   VarsEnvironment + 安全表达式
+│   │   └── script_generator.py      #   轨迹转脚本
+│   ├── optimizers/                  # Infrastructure - Token 优化
+│   │   ├── dom_pruner.py
+│   │   ├── screenshot_opt.py
+│   │   └── state_summary.py
+│   ├── benchmark/                   # 性能基准套件
+├── handlers/                        # Handler 层 - MCP 工具注册
+│   ├── browser_handlers.py          #   26 个 browser_* 工具
+│   ├── trajectory_handlers.py       #   trajectory_* 工具
+│   └── script_handlers.py           #   script_* / run / resume / session / binding
+├── mcp_server.py                    # 入口：MCP stdio
+├── mcp_server_http.py               # 入口：Streamable HTTP
+├── benchmark_cli.py                 # 基准测试 CLI
+├── tests/                           # unit + integration
+└── zerotoken.db                     # SQLite 数据库（运行时生成）
 ```
 
 ## 使用场景
