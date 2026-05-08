@@ -1,11 +1,12 @@
 """Tests for trajectory save to DB and selector_candidates in operations."""
+
 import os
 import tempfile
 
 import pytest
 
 from zerotoken.controller import OperationRecord, PageState
-from zerotoken.trajectory import Trajectory, TrajectoryRecorder
+from zerotoken.trajectory import TrajectoryRecorder
 from zerotoken.storage_sqlite import SQLiteStorage
 
 

@@ -1,4 +1,5 @@
 """交互类动作：click, input"""
+
 from __future__ import annotations
 
 import asyncio
@@ -59,9 +60,13 @@ async def drag_drop_action(frame: Any, element: Any, params: dict[str, Any]) -> 
     target = await frame.wait_for_selector(target_selector, timeout=params.get("timeout", 10000))
     src_box = await element.bounding_box()
     dst_box = await target.bounding_box()
-    await frame.mouse.move(src_box["x"] + src_box["width"] / 2, src_box["y"] + src_box["height"] / 2)
+    await frame.mouse.move(
+        src_box["x"] + src_box["width"] / 2, src_box["y"] + src_box["height"] / 2
+    )
     await frame.mouse.down()
-    await frame.mouse.move(dst_box["x"] + dst_box["width"] / 2, dst_box["y"] + dst_box["height"] / 2)
+    await frame.mouse.move(
+        dst_box["x"] + dst_box["width"] / 2, dst_box["y"] + dst_box["height"] / 2
+    )
     await frame.mouse.up()
     return {"target": target_selector}
 

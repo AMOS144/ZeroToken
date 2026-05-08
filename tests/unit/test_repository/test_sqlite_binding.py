@@ -1,16 +1,20 @@
 """SQLiteBindingRepo 测试"""
+
 import pytest
 
 
 @pytest.fixture
 def repo():
     from zerotoken.repository.sqlite import SQLiteBindingRepo, new_connection
+
     conn = new_connection(":memory:")
     return SQLiteBindingRepo(conn)
 
 
 def test_set_and_get(repo):
-    repo.binding_set("job1", script_task_id="script1", description="test binding", default_vars={"user": "admin"})
+    repo.binding_set(
+        "job1", script_task_id="script1", description="test binding", default_vars={"user": "admin"}
+    )
     b = repo.binding_get("job1")
     assert b is not None
     assert b["script_task_id"] == "script1"

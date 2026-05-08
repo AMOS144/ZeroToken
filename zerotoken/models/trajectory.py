@@ -1,4 +1,5 @@
 """轨迹数据模型"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,6 +12,7 @@ from .operation import OperationRecord
 
 class TrajectoryMetadata(BaseModel):
     """轨迹统计元数据"""
+
     total_steps: int = 0
     successful_steps: int = 0
     failed_steps: int = 0
@@ -19,6 +21,7 @@ class TrajectoryMetadata(BaseModel):
 
 class Trajectory(BaseModel):
     """完整的操作轨迹"""
+
     task_id: str
     goal: str
     operations: list[OperationRecord] = Field(default_factory=list)
@@ -39,9 +42,7 @@ class Trajectory(BaseModel):
         """标记轨迹完成"""
         self.end_time = datetime.now()
         if self.start_time and self.end_time:
-            self.metadata.duration_seconds = (
-                self.end_time - self.start_time
-            ).total_seconds()
+            self.metadata.duration_seconds = (self.end_time - self.start_time).total_seconds()
 
     def to_ai_prompt(self) -> str:
         """导出 AI 友好的文本格式"""

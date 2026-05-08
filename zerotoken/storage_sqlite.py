@@ -2,6 +2,7 @@
 SQLite implementation of ScriptStore, TrajectoryStore, SessionStore, AdaptiveStore.
 Single DB file (e.g. zerotoken.db); tables: scripts, trajectories, session_headers, session_steps, fingerprints.
 """
+
 import json
 import sqlite3
 import time
@@ -270,9 +271,7 @@ class SQLiteStorage(
         )
         self.conn.commit()
 
-    def fingerprint_load(
-        self, domain: str, identifier: str
-    ) -> Optional[Dict[str, Any]]:
+    def fingerprint_load(self, domain: str, identifier: str) -> Optional[Dict[str, Any]]:
         cur = self.conn.cursor()
         row = cur.execute(
             "SELECT fingerprint_json FROM fingerprints WHERE domain = ? AND identifier = ?",
@@ -312,8 +311,14 @@ class SQLiteStorage(
 
     def script_list(self, limit: int = 100) -> List[Dict[str, Any]]:
         cur = self.conn.cursor()
-        cur.execute("SELECT task_id, goal, created_at FROM scripts ORDER BY updated_at DESC LIMIT ?", (limit,))
-        return [{"task_id": r["task_id"], "goal": r["goal"], "created_at": r["created_at"]} for r in cur.fetchall()]
+        cur.execute(
+            "SELECT task_id, goal, created_at FROM scripts ORDER BY updated_at DESC LIMIT ?",
+            (limit,),
+        )
+        return [
+            {"task_id": r["task_id"], "goal": r["goal"], "created_at": r["created_at"]}
+            for r in cur.fetchall()
+        ]
 
     def script_delete(self, task_id: str) -> bool:
         cur = self.conn.cursor()
@@ -341,7 +346,10 @@ class SQLiteStorage(
 
     def trajectory_load(self, trajectory_id: int) -> Optional[Dict[str, Any]]:
         cur = self.conn.cursor()
-        cur.execute("SELECT id, task_id, goal, operations, metadata, created_at FROM trajectories WHERE id = ?", (trajectory_id,))
+        cur.execute(
+            "SELECT id, task_id, goal, operations, metadata, created_at FROM trajectories WHERE id = ?",
+            (trajectory_id,),
+        )
         row = cur.fetchone()
         if row is None:
             return None
@@ -389,7 +397,12 @@ class SQLiteStorage(
                 (limit,),
             )
         return [
-            {"id": r["id"], "task_id": r["task_id"], "goal": r["goal"], "created_at": r["created_at"]}
+            {
+                "id": r["id"],
+                "task_id": r["task_id"],
+                "goal": r["goal"],
+                "created_at": r["created_at"],
+            }
             for r in cur.fetchall()
         ]
 
@@ -460,9 +473,17 @@ class SQLiteStorage(
 
     def session_list(self, limit: int = 100) -> List[Dict[str, Any]]:
         cur = self.conn.cursor()
-        cur.execute("SELECT session_id, task_id, session_type, created_at FROM session_headers ORDER BY created_at DESC LIMIT ?", (limit,))
+        cur.execute(
+            "SELECT session_id, task_id, session_type, created_at FROM session_headers ORDER BY created_at DESC LIMIT ?",
+            (limit,),
+        )
         return [
-            {"session_id": r["session_id"], "task_id": r["task_id"], "session_type": r["session_type"], "created_at": r["created_at"]}
+            {
+                "session_id": r["session_id"],
+                "task_id": r["task_id"],
+                "session_type": r["session_type"],
+                "created_at": r["created_at"],
+            }
             for r in cur.fetchall()
         ]
 
@@ -526,8 +547,13 @@ class SQLiteStorage(
 
     def dfu_list(self, limit: int = 100) -> List[Dict[str, Any]]:
         cur = self.conn.cursor()
-        cur.execute("SELECT dfu_id, name, updated_at FROM dfus ORDER BY updated_at DESC LIMIT ?", (limit,))
-        return [{"dfu_id": r["dfu_id"], "name": r["name"], "updated_at": r["updated_at"]} for r in cur.fetchall()]
+        cur.execute(
+            "SELECT dfu_id, name, updated_at FROM dfus ORDER BY updated_at DESC LIMIT ?", (limit,)
+        )
+        return [
+            {"dfu_id": r["dfu_id"], "name": r["name"], "updated_at": r["updated_at"]}
+            for r in cur.fetchall()
+        ]
 
     def dfu_delete(self, dfu_id: str) -> bool:
         cur = self.conn.cursor()
@@ -605,12 +631,20 @@ class SQLiteStorage(
         existing = self.runtime_get(session_id)
         if existing is None:
             raise KeyError(f"runtime state not found: {session_id}")
-        new_cursor = int(existing["cursor_step_index"] if cursor_step_index is None else cursor_step_index)
+        new_cursor = int(
+            existing["cursor_step_index"] if cursor_step_index is None else cursor_step_index
+        )
         new_status = existing["status"] if status is None else status
         if pause_event is _RUNTIME_UNSET:
-            new_pause_event_json = _json_serializer(existing["pause_event"]) if existing["pause_event"] is not None else None
+            new_pause_event_json = (
+                _json_serializer(existing["pause_event"])
+                if existing["pause_event"] is not None
+                else None
+            )
         else:
-            new_pause_event_json = _json_serializer(pause_event) if pause_event is not None else None
+            new_pause_event_json = (
+                _json_serializer(pause_event) if pause_event is not None else None
+            )
         if vars is _RUNTIME_UNSET:
             new_vars_json = _json_serializer(existing["vars"] or {})
         else:

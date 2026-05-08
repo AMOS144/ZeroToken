@@ -1,15 +1,20 @@
 """ZeroToken MCP Server - 入口点"""
+
 import asyncio
 import os
 import time
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent
 
 from zerotoken.repository.sqlite import (
-    new_connection, SQLiteScriptRepo, SQLiteTrajectoryRepo,
-    SQLiteSessionRepo, SQLiteRuntimeRepo, SQLiteFingerprintRepo, SQLiteBindingRepo,
+    new_connection,
+    SQLiteScriptRepo,
+    SQLiteTrajectoryRepo,
+    SQLiteSessionRepo,
+    SQLiteRuntimeRepo,
+    SQLiteFingerprintRepo,
+    SQLiteBindingRepo,
 )
 from zerotoken.services import BrowserService, TrajectoryService, ScriptService
 from zerotoken.benchmark import BenchmarkRecorder
@@ -95,6 +100,7 @@ def run(transport: str = "stdio"):
     """入口：支持 stdio 和 streamable-http 两种传输"""
     if transport == "streamable-http":
         from mcp_server_http import run as run_http
+
         run_http()
     else:
         asyncio.run(main())
@@ -102,9 +108,11 @@ def run(transport: str = "stdio"):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser(description="ZeroToken MCP Server")
     parser.add_argument(
-        "--transport", choices=["stdio", "streamable-http"],
+        "--transport",
+        choices=["stdio", "streamable-http"],
         default=os.environ.get("ZEROTOKEN_MCP_TRANSPORT", "stdio"),
     )
     args = parser.parse_args()

@@ -26,7 +26,7 @@ class Trajectory:
             "browser_info": None,
             "total_steps": 0,
             "successful_steps": 0,
-            "failed_steps": 0
+            "failed_steps": 0,
         }
 
     def add_operation(self, record: OperationRecord) -> None:
@@ -49,9 +49,11 @@ class Trajectory:
             "goal": self.goal,
             "start_time": self.start_time.isoformat(),
             "end_time": self.end_time.isoformat() if self.end_time else None,
-            "duration_seconds": (self.end_time - self.start_time).total_seconds() if self.end_time else None,
+            "duration_seconds": (self.end_time - self.start_time).total_seconds()
+            if self.end_time
+            else None,
             "metadata": self.metadata,
-            "operations": self.operations
+            "operations": self.operations,
         }
 
     def to_ai_prompt_format(self) -> str:
@@ -110,7 +112,9 @@ class TrajectoryRecorder:
         Returns:
             The new Trajectory object
         """
-        if self._current_trajectory is not None and self._current_trajectory.task_id.startswith("_implicit_"):
+        if self._current_trajectory is not None and self._current_trajectory.task_id.startswith(
+            "_implicit_"
+        ):
             self.complete_trajectory()
         self._current_trajectory = Trajectory(task_id, goal)
 
@@ -149,8 +153,7 @@ class TrajectoryRecorder:
                 for op_dict in self._controller.get_operation_history():
                     # Check if already recorded
                     already_recorded = any(
-                        op['step'] == op_dict['step']
-                        for op in self._current_trajectory.operations
+                        op["step"] == op_dict["step"] for op in self._current_trajectory.operations
                     )
                     if not already_recorded:
                         # Create OperationRecord from dict
@@ -179,10 +182,10 @@ class TrajectoryRecorder:
             params=data.get("params") or {},
             result=data.get("result") or {},
             page_state=page_state,
-            screenshot=data.get('screenshot'),
-            error=data.get('error'),
-            fuzzy_point=data.get('fuzzy_point'),
-            selector_candidates=data.get('selector_candidates'),
+            screenshot=data.get("screenshot"),
+            error=data.get("error"),
+            fuzzy_point=data.get("fuzzy_point"),
+            selector_candidates=data.get("selector_candidates"),
         )
 
     def save_trajectory(self, trajectory: Optional[Trajectory] = None) -> int:

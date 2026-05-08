@@ -1,4 +1,5 @@
 """VarsEnvironment 测试：变量存取、参数解析、快照、表达式求值"""
+
 import pytest
 
 
@@ -190,11 +191,13 @@ def test_resolve_params_preserves_native_type_for_single_placeholder():
     from zerotoken.engine.data_flow import VarsEnvironment
 
     env = VarsEnvironment({"count": 42, "flag": True, "data": {"k": "v"}})
-    resolved = env.resolve_params({
-        "a": "{{count}}",
-        "b": "{{flag}}",
-        "c": "{{data}}",
-    })
+    resolved = env.resolve_params(
+        {
+            "a": "{{count}}",
+            "b": "{{flag}}",
+            "c": "{{data}}",
+        }
+    )
     assert resolved["a"] == 42
     assert isinstance(resolved["a"], int)
     assert resolved["b"] is True

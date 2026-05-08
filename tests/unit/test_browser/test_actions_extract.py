@@ -1,4 +1,5 @@
 """Extract actions 单元测试"""
+
 import pytest
 from unittest.mock import AsyncMock
 

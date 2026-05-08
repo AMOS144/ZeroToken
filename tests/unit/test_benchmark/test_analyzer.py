@@ -1,4 +1,5 @@
 """BenchmarkAnalyzer 单元测试"""
+
 import json
 
 

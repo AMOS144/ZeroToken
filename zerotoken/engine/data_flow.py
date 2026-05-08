@@ -7,6 +7,7 @@ VarsEnvironment 负责：
 4. 赋值表达式安全求值 (eval_expr)
 5. 快照 / 恢复 (snapshot)
 """
+
 from __future__ import annotations
 
 import ast
@@ -175,13 +176,9 @@ class VarsEnvironment:
         for node in ast.walk(tree):
             if isinstance(node, ast.Name):
                 if node.id.startswith("__"):
-                    raise ValueError(
-                        f"Expression name {node.id!r} not allowed in: {expr}"
-                    )
+                    raise ValueError(f"Expression name {node.id!r} not allowed in: {expr}")
                 if node.id in _BLOCKED_IDENTIFIERS:
-                    raise ValueError(
-                        f"Expression name {node.id!r} not allowed in: {expr}"
-                    )
+                    raise ValueError(f"Expression name {node.id!r} not allowed in: {expr}")
 
         namespace = {**self._SAFE_BUILTINS, **self._vars}
         code = compile(tree, "<expr>", "eval")

@@ -1,4 +1,5 @@
 """script_run / script_resume handler 测试"""
+
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock
@@ -9,7 +10,9 @@ def mock_script_svc():
     svc = MagicMock()
     svc.run_script = AsyncMock(return_value={"status": "completed", "session_id": "sess-1"})
     svc.resume_script = AsyncMock(return_value={"status": "completed", "session_id": "sess-1"})
-    svc.run_script_by_binding = AsyncMock(return_value={"status": "completed", "session_id": "sess-1"})
+    svc.run_script_by_binding = AsyncMock(
+        return_value={"status": "completed", "session_id": "sess-1"}
+    )
     return svc
 
 
@@ -21,6 +24,7 @@ def mock_browser_svc():
 @pytest.mark.asyncio
 async def test_script_run_start(mock_script_svc, mock_browser_svc):
     from handlers.script_handlers import handle_script_tool
+
     result = await handle_script_tool(
         "script_run",
         {"task_id": "test_task", "vars": {"x": 1}},
@@ -35,6 +39,7 @@ async def test_script_run_start(mock_script_svc, mock_browser_svc):
 @pytest.mark.asyncio
 async def test_script_resume(mock_script_svc, mock_browser_svc):
     from handlers.script_handlers import handle_script_tool
+
     result = await handle_script_tool(
         "script_resume",
         {"session_id": "sess-1", "resolution": {"type": "retry"}},
@@ -139,9 +144,7 @@ async def test_handle_script_restore_not_deprecated():
     from handlers.script_handlers import handle_script_tool
 
     svc = MagicMock()
-    svc.script_restore = MagicMock(
-        side_effect=ValueError("script t1 is not deprecated")
-    )
+    svc.script_restore = MagicMock(side_effect=ValueError("script t1 is not deprecated"))
     result = await handle_script_tool(
         "script_restore",
         {"task_id": "t1"},

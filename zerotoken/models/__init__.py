@@ -1,4 +1,5 @@
 """ZeroToken Domain Models - Pydantic v2"""
+
 from .operation import (
     ActionType,
     PageState,

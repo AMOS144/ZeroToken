@@ -1,16 +1,22 @@
 """ScriptEngineV2 测试：启动/暂停/恢复 + Step-as-Unit"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from zerotoken.models.script import ScriptStep, Script
 from zerotoken.models.session import Resolution
 from zerotoken.models.operation import (
-    OperationRecord, OperationResult, PageState, ActionType,
+    OperationRecord,
+    OperationResult,
+    PageState,
+    ActionType,
 )
 
 
 def _ok_record(**data) -> OperationRecord:
     return OperationRecord(
-        step=1, action=ActionType.CLICK, params={},
+        step=1,
+        action=ActionType.CLICK,
+        params={},
         result=OperationResult(success=True, data=data or {}),
         page_state=PageState(url="https://example.com"),
     )
@@ -18,7 +24,8 @@ def _ok_record(**data) -> OperationRecord:
 
 def _fail_record(error: str = "not found") -> OperationRecord:
     return OperationRecord(
-        step=1, action=ActionType.CLICK,
+        step=1,
+        action=ActionType.CLICK,
         params={"selector": "#btn"},
         result=OperationResult(success=False, error=error),
         page_state=PageState(url="https://example.com"),
@@ -57,7 +64,8 @@ async def test_run_simple_script(mock_browser_svc, mock_session_repo, mock_runti
     from zerotoken.engine.script_engine_v2 import ScriptEngineV2
 
     script = Script(
-        task_id="test", goal="test goal",
+        task_id="test",
+        goal="test goal",
         steps=[
             ScriptStep(action="browser_open", params={"url": "https://example.com"}),
             ScriptStep(action="browser_click", params={"selector": "#btn"}),
@@ -77,7 +85,8 @@ async def test_run_pauses_on_failure(mock_browser_svc, mock_session_repo, mock_r
     mock_browser_svc.click = AsyncMock(return_value=_fail_record("element not found"))
 
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[ScriptStep(action="browser_click", params={"selector": "#missing"})],
     )
     engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
@@ -93,7 +102,8 @@ async def test_run_with_vars(mock_browser_svc, mock_session_repo, mock_runtime_r
     from zerotoken.engine.script_engine_v2 import ScriptEngineV2
 
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[ScriptStep(action="browser_open", params={"url": "{{target_url}}"})],
     )
     engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
@@ -107,7 +117,8 @@ async def test_resume_with_retry(mock_browser_svc, mock_session_repo, mock_runti
 
     mock_browser_svc.click = AsyncMock(return_value=_fail_record("not found"))
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[ScriptStep(action="browser_click", params={"selector": "#btn"})],
     )
     engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
@@ -116,13 +127,15 @@ async def test_resume_with_retry(mock_browser_svc, mock_session_repo, mock_runti
     session_id = run_result["session_id"]
 
     mock_browser_svc.click = AsyncMock(return_value=_ok_record())
-    mock_runtime_repo.runtime_get = MagicMock(return_value={
-        "session_id": session_id,
-        "task_id": "test",
-        "cursor_step_index": 0,
-        "status": "paused",
-        "vars": {},
-    })
+    mock_runtime_repo.runtime_get = MagicMock(
+        return_value={
+            "session_id": session_id,
+            "task_id": "test",
+            "cursor_step_index": 0,
+            "status": "paused",
+            "vars": {},
+        }
+    )
     resolution = Resolution(type="retry")
     resume_result = await engine.resume(session_id, script, resolution)
     assert resume_result["status"] == "completed"
@@ -134,7 +147,8 @@ async def test_resume_with_skip(mock_browser_svc, mock_session_repo, mock_runtim
 
     mock_browser_svc.click = AsyncMock(return_value=_fail_record("not found"))
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[
             ScriptStep(action="browser_click", params={"selector": "#btn"}),
             ScriptStep(action="browser_open", params={"url": "https://next.com"}),
@@ -145,13 +159,15 @@ async def test_resume_with_skip(mock_browser_svc, mock_session_repo, mock_runtim
     session_id = run_result["session_id"]
 
     mock_browser_svc.open = AsyncMock(return_value=_ok_record())
-    mock_runtime_repo.runtime_get = MagicMock(return_value={
-        "session_id": session_id,
-        "task_id": "test",
-        "cursor_step_index": 0,
-        "status": "paused",
-        "vars": {},
-    })
+    mock_runtime_repo.runtime_get = MagicMock(
+        return_value={
+            "session_id": session_id,
+            "task_id": "test",
+            "cursor_step_index": 0,
+            "status": "paused",
+            "vars": {},
+        }
+    )
     resolution = Resolution(type="skip")
     resume_result = await engine.resume(session_id, script, resolution)
     assert resume_result["status"] == "completed"
@@ -163,7 +179,8 @@ async def test_resume_with_patch_step(mock_browser_svc, mock_session_repo, mock_
 
     mock_browser_svc.click = AsyncMock(return_value=_fail_record("not found"))
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[ScriptStep(action="browser_click", params={"selector": "#old-btn"})],
     )
     engine = ScriptEngineV2(mock_browser_svc, mock_session_repo, mock_runtime_repo)
@@ -171,13 +188,15 @@ async def test_resume_with_patch_step(mock_browser_svc, mock_session_repo, mock_
     session_id = run_result["session_id"]
 
     mock_browser_svc.click = AsyncMock(return_value=_ok_record())
-    mock_runtime_repo.runtime_get = MagicMock(return_value={
-        "session_id": session_id,
-        "task_id": "test",
-        "cursor_step_index": 0,
-        "status": "paused",
-        "vars": {},
-    })
+    mock_runtime_repo.runtime_get = MagicMock(
+        return_value={
+            "session_id": session_id,
+            "task_id": "test",
+            "cursor_step_index": 0,
+            "status": "paused",
+            "vars": {},
+        }
+    )
     resolution = Resolution(type="patch_step", patch={"params": {"selector": "#new-btn"}})
     resume_result = await engine.resume(session_id, script, resolution)
     assert resume_result["status"] == "completed"
@@ -186,12 +205,15 @@ async def test_resume_with_patch_step(mock_browser_svc, mock_session_repo, mock_
 
 
 @pytest.mark.asyncio
-async def test_trajectory_actions_auto_skipped(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+async def test_trajectory_actions_auto_skipped(
+    mock_browser_svc, mock_session_repo, mock_runtime_repo
+):
     """trajectory_start 等轨迹控制步骤应自动跳过（不报 Unknown action）"""
     from zerotoken.engine.script_engine_v2 import ScriptEngineV2
 
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[
             ScriptStep(action="trajectory_start", params={"task_id": "t", "goal": "g"}),
             ScriptStep(action="browser_open", params={"url": "https://example.com"}),
@@ -212,7 +234,8 @@ async def test_browser_init_actually_called(mock_browser_svc, mock_session_repo,
     mock_browser_svc.init = AsyncMock(return_value={"success": True})
 
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[
             ScriptStep(action="browser_init", params={"headless": True, "stealth": True}),
             ScriptStep(action="browser_open", params={"url": "https://example.com"}),
@@ -226,14 +249,17 @@ async def test_browser_init_actually_called(mock_browser_svc, mock_session_repo,
 
 
 @pytest.mark.asyncio
-async def test_browser_close_actually_called(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+async def test_browser_close_actually_called(
+    mock_browser_svc, mock_session_repo, mock_runtime_repo
+):
     """browser_close 步骤应真正调用 browser_svc.close()"""
     from zerotoken.engine.script_engine_v2 import ScriptEngineV2
 
     mock_browser_svc.close = AsyncMock(return_value={"success": True})
 
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[
             ScriptStep(action="browser_open", params={"url": "https://example.com"}),
             ScriptStep(action="browser_close", params={}),
@@ -246,7 +272,9 @@ async def test_browser_close_actually_called(mock_browser_svc, mock_session_repo
 
 
 @pytest.mark.asyncio
-async def test_new_tab_assign_to_captures_tab_id(mock_browser_svc, mock_session_repo, mock_runtime_repo):
+async def test_new_tab_assign_to_captures_tab_id(
+    mock_browser_svc, mock_session_repo, mock_runtime_repo
+):
     """new_tab 带 assign_to 时，返回的 tab_id 应存入变量环境供后续使用"""
     from zerotoken.engine.script_engine_v2 import ScriptEngineV2
 
@@ -254,9 +282,12 @@ async def test_new_tab_assign_to_captures_tab_id(mock_browser_svc, mock_session_
     mock_browser_svc.close_tab = AsyncMock(return_value=_ok_record())
 
     script = Script(
-        task_id="test", goal="test",
+        task_id="test",
+        goal="test",
         steps=[
-            ScriptStep(action="browser_new_tab", params={"url": "https://new.com"}, assign_to="_new_tab_0"),
+            ScriptStep(
+                action="browser_new_tab", params={"url": "https://new.com"}, assign_to="_new_tab_0"
+            ),
             ScriptStep(action="browser_close_tab", params={"tab_id": "{{_new_tab_0.tab_id}}"}),
         ],
     )

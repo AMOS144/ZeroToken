@@ -1,9 +1,9 @@
 """Script 模型单元测试"""
-import pytest
 
 
 def test_script_step_basic():
     from zerotoken.models.script import ScriptStep
+
     step = ScriptStep(action="browser_click", params={"selector": "#btn"})
     assert step.action == "browser_click"
     assert step.condition is None
@@ -15,6 +15,7 @@ def test_script_step_basic():
 def test_script_step_with_flow_control():
     """ScriptStep 支持嵌套 body/else_body"""
     from zerotoken.models.script import ScriptStep
+
     step = ScriptStep(
         action="if",
         condition="price < 100",
@@ -32,6 +33,7 @@ def test_script_step_with_flow_control():
 
 def test_script_step_with_assign():
     from zerotoken.models.script import ScriptStep
+
     step = ScriptStep(
         action="browser_get_text",
         params={"selector": ".price"},
@@ -42,6 +44,7 @@ def test_script_step_with_assign():
 
 def test_script_full():
     from zerotoken.models.script import Script, ScriptStep
+
     script = Script(
         task_id="demo",
         goal="demo goal",
@@ -58,6 +61,7 @@ def test_script_full():
 
 def test_script_json_roundtrip():
     from zerotoken.models.script import Script, ScriptStep
+
     script = Script(
         task_id="rt",
         goal="roundtrip",
@@ -71,5 +75,8 @@ def test_script_json_roundtrip():
 
 def test_step_hint():
     from zerotoken.models.script import StepHint
-    h = StepHint(hint_id="h1", match_rules=[{"action_is": "browser_click"}], hint_text="may need captcha")
+
+    h = StepHint(
+        hint_id="h1", match_rules=[{"action_is": "browser_click"}], hint_text="may need captcha"
+    )
     assert h.hint_id == "h1"

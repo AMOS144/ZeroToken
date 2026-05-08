@@ -2,6 +2,7 @@
 
 读取 BenchmarkRecorder 输出的 JSONL 文件，提供自动断言和汇总报告。
 """
+
 from __future__ import annotations
 
 import json
@@ -71,8 +72,7 @@ class BenchmarkAnalyzer:
         for r in self.records:
             if r.get("error"):
                 violations.append(
-                    f"seq={r.get('seq', '?')}: {r.get('tool_name', '?')} "
-                    f"error: {r['error']}"
+                    f"seq={r.get('seq', '?')}: {r.get('tool_name', '?')} error: {r['error']}"
                 )
         return violations
 

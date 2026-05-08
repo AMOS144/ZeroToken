@@ -1,4 +1,5 @@
 """导航类动作：open, wait_for"""
+
 from __future__ import annotations
 
 import json
@@ -33,11 +34,15 @@ async def wait_for_action(frame: Any, element: Any, params: dict[str, Any]) -> d
                 fallback_timeout = max(timeout // 2, 2000)
                 try:
                     await frame.wait_for_selector(
-                        value, state="attached", timeout=fallback_timeout,
+                        value,
+                        state="attached",
+                        timeout=fallback_timeout,
                     )
                     return {
-                        "condition": condition, "value": value,
-                        "state": "attached", "degraded": True,
+                        "condition": condition,
+                        "value": value,
+                        "state": "attached",
+                        "degraded": True,
                     }
                 except Exception:
                     pass

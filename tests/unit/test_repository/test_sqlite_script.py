@@ -1,4 +1,5 @@
 """SQLiteScriptRepo 单元测试"""
+
 import pytest
 
 

@@ -1,4 +1,5 @@
 """StabilityMiddleware 单元测试"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -14,8 +15,11 @@ async def test_locate_direct_success():
 
     mw = StabilityMiddleware(selector_gen=None, adaptive_storage=None)
     element, candidates = await mw.locate(
-        mock_page, "#btn",
-        auto_save=False, adaptive=False, identifier=None,
+        mock_page,
+        "#btn",
+        auto_save=False,
+        adaptive=False,
+        identifier=None,
     )
     assert element == mock_element
 
@@ -31,8 +35,11 @@ async def test_locate_failure_no_adaptive():
     mw = StabilityMiddleware(selector_gen=None, adaptive_storage=None)
     with pytest.raises(Exception, match="not found"):
         await mw.locate(
-            mock_page, "#btn",
-            auto_save=False, adaptive=False, identifier=None,
+            mock_page,
+            "#btn",
+            auto_save=False,
+            adaptive=False,
+            identifier=None,
         )
 
 
@@ -60,8 +67,11 @@ async def test_locate_with_selector_gen():
 
     mw = StabilityMiddleware(selector_gen=mock_gen, adaptive_storage=None)
     element, candidates = await mw.locate(
-        mock_page, "#btn",
-        auto_save=False, adaptive=False, identifier=None,
+        mock_page,
+        "#btn",
+        auto_save=False,
+        adaptive=False,
+        identifier=None,
     )
     assert element == mock_element
     assert len(candidates) == 1
@@ -84,18 +94,25 @@ async def test_locate_adaptive_fallback():
 
     # 需要 mock adaptive 模块的 relocate 函数
     import unittest.mock as um
-    with um.patch(
-        "zerotoken.browser.stability.middleware.relocate",
-        new_callable=AsyncMock,
-        return_value=mock_relocated,
-    ), um.patch(
-        "zerotoken.browser.stability.middleware._domain_from_url",
-        return_value="example.com",
+
+    with (
+        um.patch(
+            "zerotoken.browser.stability.middleware.relocate",
+            new_callable=AsyncMock,
+            return_value=mock_relocated,
+        ),
+        um.patch(
+            "zerotoken.browser.stability.middleware._domain_from_url",
+            return_value="example.com",
+        ),
     ):
         mw = StabilityMiddleware(selector_gen=None, adaptive_storage=mock_storage)
         element, candidates = await mw.locate(
-            mock_page, "#btn",
-            auto_save=False, adaptive=True, identifier="my_btn",
+            mock_page,
+            "#btn",
+            auto_save=False,
+            adaptive=True,
+            identifier="my_btn",
         )
         assert element == mock_relocated
 
@@ -116,20 +133,29 @@ async def test_locate_auto_save():
     mock_fp = {"self": {"tag": "button"}, "parent": {"tag": "div"}}
 
     import unittest.mock as um
-    with um.patch(
-        "zerotoken.browser.stability.middleware.extract_fingerprint",
-        new_callable=AsyncMock,
-        return_value=mock_fp,
-    ), um.patch(
-        "zerotoken.browser.stability.middleware._domain_from_url",
-        return_value="example.com",
+
+    with (
+        um.patch(
+            "zerotoken.browser.stability.middleware.extract_fingerprint",
+            new_callable=AsyncMock,
+            return_value=mock_fp,
+        ),
+        um.patch(
+            "zerotoken.browser.stability.middleware._domain_from_url",
+            return_value="example.com",
+        ),
     ):
         mw = StabilityMiddleware(selector_gen=None, adaptive_storage=mock_storage)
         element, _ = await mw.locate(
-            mock_page, "#btn",
-            auto_save=True, adaptive=False, identifier="my_btn",
+            mock_page,
+            "#btn",
+            auto_save=True,
+            adaptive=False,
+            identifier="my_btn",
         )
         assert element == mock_element
         mock_storage.fingerprint_save.assert_called_once_with(
-            "example.com", "my_btn", mock_fp,
+            "example.com",
+            "my_btn",
+            mock_fp,
         )

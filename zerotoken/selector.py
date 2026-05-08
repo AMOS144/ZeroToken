@@ -11,6 +11,7 @@ from enum import Enum
 
 class SelectorType(Enum):
     """选择器类型"""
+
     ID = "id"
     CSS = "css"
     XPATH = "xpath"
@@ -23,6 +24,7 @@ class SelectorType(Enum):
 @dataclass
 class SelectorCandidate:
     """候选选择器"""
+
     type: SelectorType
     value: str
     stability_score: float  # 0-1，越高越稳定
@@ -33,13 +35,14 @@ class SelectorCandidate:
             "type": self.type.value,
             "value": self.value,
             "stability_score": self.stability_score,
-            "description": self.description
+            "description": self.description,
         }
 
 
 @dataclass
 class SmartSelector:
     """智能选择器，包含多个候选"""
+
     primary: SelectorCandidate  # 首选选择器
     alternatives: List[SelectorCandidate]  # 备选选择器
     element_info: Dict[str, Any]  # 元素信息快照
@@ -57,7 +60,7 @@ class SmartSelector:
         return {
             "primary": self.primary.to_dict(),
             "alternatives": [a.to_dict() for a in self.alternatives],
-            "element_info": self.element_info
+            "element_info": self.element_info,
         }
 
 
@@ -71,25 +74,25 @@ class SmartSelectorGenerator:
 
     # 稳定性评分权重
     STABILITY_WEIGHTS = {
-        SelectorType.TEST_ID: 0.95,    # data-testid 最稳定
-        SelectorType.ID: 0.90,         # id 次之
-        SelectorType.ARIA: 0.85,       # ARIA 属性
-        SelectorType.ROLE: 0.80,       # 角色选择器
-        SelectorType.CSS: 0.70,        # CSS 选择器
-        SelectorType.TEXT: 0.65,       # 文本选择器
-        SelectorType.XPATH: 0.50,      # XPath 最不稳定
+        SelectorType.TEST_ID: 0.95,  # data-testid 最稳定
+        SelectorType.ID: 0.90,  # id 次之
+        SelectorType.ARIA: 0.85,  # ARIA 属性
+        SelectorType.ROLE: 0.80,  # 角色选择器
+        SelectorType.CSS: 0.70,  # CSS 选择器
+        SelectorType.TEXT: 0.65,  # 文本选择器
+        SelectorType.XPATH: 0.50,  # XPath 最不稳定
     }
 
     # 不稳定类名前缀（动态生成）
     UNSTABLE_PATTERNS = [
-        r'^el-\d',              # Element UI
-        r'^ant-.*-\d+$',        # Ant Design (e.g., ant-btn-primary-123)
-        r'^Mui[A-Z]\w*(-\d+)?', # Material UI (e.g., MuiButton, MuiButton-123)
-        r'^chakra-\w+(-\d+)?',  # Chakra UI
-        r'^css-[a-z0-9]',       # CSS Modules
-        r'^_[a-z0-9]{6}',       # 哈希类名
-        r'^sc-\w+',             # Styled Components
-        r'-\d{4,}$',            # 以大数字结尾的类名 (e.g., btn-1234)
+        r"^el-\d",  # Element UI
+        r"^ant-.*-\d+$",  # Ant Design (e.g., ant-btn-primary-123)
+        r"^Mui[A-Z]\w*(-\d+)?",  # Material UI (e.g., MuiButton, MuiButton-123)
+        r"^chakra-\w+(-\d+)?",  # Chakra UI
+        r"^css-[a-z0-9]",  # CSS Modules
+        r"^_[a-z0-9]{6}",  # 哈希类名
+        r"^sc-\w+",  # Styled Components
+        r"-\d{4,}$",  # 以大数字结尾的类名 (e.g., btn-1234)
     ]
 
     def __init__(self):
@@ -150,9 +153,7 @@ class SmartSelectorGenerator:
             raise ValueError("无法为元素生成任何选择器")
 
         return SmartSelector(
-            primary=candidates[0],
-            alternatives=candidates[1:],
-            element_info=element_info
+            primary=candidates[0], alternatives=candidates[1:], element_info=element_info
         )
 
     async def _collect_element_info(self, element) -> Dict[str, Any]:
@@ -180,29 +181,29 @@ class SmartSelectorGenerator:
 
     def _generate_test_id_selector(self, info: Dict) -> Optional[SelectorCandidate]:
         """生成 data-testid 选择器"""
-        test_id = info.get('dataTestId')
+        test_id = info.get("dataTestId")
         if test_id:
             return SelectorCandidate(
                 type=SelectorType.TEST_ID,
                 value=f"[data-testid='{test_id}']",
                 stability_score=self.STABILITY_WEIGHTS[SelectorType.TEST_ID],
-                description=f"data-testid='{test_id}'"
+                description=f"data-testid='{test_id}'",
             )
 
-        data_id = info.get('dataId')
+        data_id = info.get("dataId")
         if data_id:
             return SelectorCandidate(
                 type=SelectorType.TEST_ID,
                 value=f"[data-id='{data_id}']",
                 stability_score=self.STABILITY_WEIGHTS[SelectorType.TEST_ID] - 0.05,
-                description=f"data-id='{data_id}'"
+                description=f"data-id='{data_id}'",
             )
 
         return None
 
     def _generate_id_selector(self, info: Dict) -> Optional[SelectorCandidate]:
         """生成 ID 选择器"""
-        element_id = info.get('id')
+        element_id = info.get("id")
         if not element_id:
             return None
 
@@ -212,7 +213,7 @@ class SmartSelectorGenerator:
                 type=SelectorType.ID,
                 value=f"#{element_id}",
                 stability_score=self.STABILITY_WEIGHTS[SelectorType.ID],
-                description=f"id='{element_id}'"
+                description=f"id='{element_id}'",
             )
 
         return None
@@ -221,35 +222,37 @@ class SmartSelectorGenerator:
         """生成 ARIA 选择器"""
         selectors = []
 
-        aria_label = info.get('ariaLabel')
+        aria_label = info.get("ariaLabel")
         if aria_label:
-            selectors.append(SelectorCandidate(
-                type=SelectorType.ARIA,
-                value=f"[aria-label='{aria_label}']",
-                stability_score=self.STABILITY_WEIGHTS[SelectorType.ARIA],
-                description=f"aria-label='{aria_label}'"
-            ))
+            selectors.append(
+                SelectorCandidate(
+                    type=SelectorType.ARIA,
+                    value=f"[aria-label='{aria_label}']",
+                    stability_score=self.STABILITY_WEIGHTS[SelectorType.ARIA],
+                    description=f"aria-label='{aria_label}'",
+                )
+            )
 
         return selectors
 
     def _generate_role_selector(self, info: Dict) -> Optional[SelectorCandidate]:
         """生成 Role 选择器"""
-        role = info.get('ariaRole')
+        role = info.get("ariaRole")
         if not role:
             return None
 
         # 常见角色映射
         role_map = {
-            'button': 'button',
-            'link': 'link',
-            'checkbox': 'checkbox',
-            'textbox': 'textbox',
-            'combobox': 'combobox',
-            'menu': 'menu',
-            'menuitem': 'menuitem',
-            'tab': 'tab',
-            'dialog': 'dialog',
-            'alert': 'alert',
+            "button": "button",
+            "link": "link",
+            "checkbox": "checkbox",
+            "textbox": "textbox",
+            "combobox": "combobox",
+            "menu": "menu",
+            "menuitem": "menuitem",
+            "tab": "tab",
+            "dialog": "dialog",
+            "alert": "alert",
         }
 
         role_name = role_map.get(role.lower())
@@ -258,7 +261,7 @@ class SmartSelectorGenerator:
                 type=SelectorType.ROLE,
                 value=f"role={role_name}",
                 stability_score=self.STABILITY_WEIGHTS[SelectorType.ROLE],
-                description=f"role='{role}'"
+                description=f"role='{role}'",
             )
 
         return None
@@ -266,43 +269,49 @@ class SmartSelectorGenerator:
     async def _generate_css_selectors(self, element, info: Dict) -> List[SelectorCandidate]:
         """生成 CSS 选择器"""
         selectors = []
-        tag = info.get('tag', '')
+        tag = info.get("tag", "")
 
         # 1. tag + class
-        class_name = info.get('className', '')
+        class_name = info.get("className", "")
         if class_name:
             # 过滤不稳定类名
             stable_classes = self._filter_stable_classes(class_name)
             if stable_classes:
                 selector = f"{tag}.{stable_classes[0]}"
-                selectors.append(SelectorCandidate(
-                    type=SelectorType.CSS,
-                    value=selector,
-                    stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS] + 0.1,
-                    description=f"CSS: {selector}"
-                ))
+                selectors.append(
+                    SelectorCandidate(
+                        type=SelectorType.CSS,
+                        value=selector,
+                        stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS] + 0.1,
+                        description=f"CSS: {selector}",
+                    )
+                )
 
         # 2. tag + attribute
-        name_attr = info.get('name')
+        name_attr = info.get("name")
         if name_attr:
             selector = f"{tag}[name='{name_attr}']"
-            selectors.append(SelectorCandidate(
-                type=SelectorType.CSS,
-                value=selector,
-                stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS] + 0.05,
-                description=f"CSS: {selector}"
-            ))
+            selectors.append(
+                SelectorCandidate(
+                    type=SelectorType.CSS,
+                    value=selector,
+                    stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS] + 0.05,
+                    description=f"CSS: {selector}",
+                )
+            )
 
         # 3. tag + placeholder
-        placeholder = info.get('placeholder')
+        placeholder = info.get("placeholder")
         if placeholder:
             selector = f"{tag}[placeholder='{placeholder}']"
-            selectors.append(SelectorCandidate(
-                type=SelectorType.CSS,
-                value=selector,
-                stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS],
-                description=f"CSS: {selector}"
-            ))
+            selectors.append(
+                SelectorCandidate(
+                    type=SelectorType.CSS,
+                    value=selector,
+                    stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS],
+                    description=f"CSS: {selector}",
+                )
+            )
 
         # 4. 生成父级路径 CSS（更稳定）
         parent_css = await self._generate_parent_css(element, info)
@@ -313,7 +322,7 @@ class SmartSelectorGenerator:
 
     def _generate_text_selector(self, info: Dict) -> Optional[SelectorCandidate]:
         """生成文本选择器"""
-        text = info.get('text')
+        text = info.get("text")
         if not text or len(text) < 3:
             return None
 
@@ -325,15 +334,15 @@ class SmartSelectorGenerator:
             type=SelectorType.TEXT,
             value=text,
             stability_score=self.STABILITY_WEIGHTS[SelectorType.TEXT],
-            description=f"text='{text}'"
+            description=f"text='{text}'",
         )
 
     async def _generate_xpath(self, element, info: Dict) -> Optional[SelectorCandidate]:
         """生成 XPath 选择器（最后备选）"""
         try:
             # 生成基于文本的 XPath
-            text = info.get('text')
-            tag = info.get('tag', '')
+            text = info.get("text")
+            tag = info.get("tag", "")
 
             if text:
                 # 使用文本匹配
@@ -342,7 +351,7 @@ class SmartSelectorGenerator:
                     type=SelectorType.XPATH,
                     value=selector,
                     stability_score=self.STABILITY_WEIGHTS[SelectorType.XPATH] + 0.1,
-                    description=f"XPath: {selector}"
+                    description=f"XPath: {selector}",
                 )
 
             # 生成绝对路径（最不稳定）
@@ -374,7 +383,7 @@ class SmartSelectorGenerator:
                 type=SelectorType.XPATH,
                 value=selector,
                 stability_score=self.STABILITY_WEIGHTS[SelectorType.XPATH],
-                description=f"XPath: {selector}"
+                description=f"XPath: {selector}",
             )
         except:
             return None
@@ -396,9 +405,9 @@ class SmartSelectorGenerator:
             if not parent_info:
                 return None
 
-            tag = info.get('tag', '')
-            parent_tag = parent_info.get('tag', '')
-            parent_text = parent_info.get('text', '')
+            tag = info.get("tag", "")
+            parent_tag = parent_info.get("tag", "")
+            parent_text = parent_info.get("text", "")
 
             if parent_text:
                 # 使用父级文本定位
@@ -407,7 +416,7 @@ class SmartSelectorGenerator:
                     type=SelectorType.CSS,
                     value=selector,
                     stability_score=self.STABILITY_WEIGHTS[SelectorType.CSS] + 0.15,
-                    description=f"CSS (parent): {selector}"
+                    description=f"CSS (parent): {selector}",
                 )
 
             return None

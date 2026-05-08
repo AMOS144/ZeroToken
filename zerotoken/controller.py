@@ -33,11 +33,7 @@ class PageState:
         self.timestamp = datetime.now().isoformat()
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
-            "url": self.url,
-            "title": self.title,
-            "timestamp": self.timestamp
-        }
+        return {"url": self.url, "title": self.title, "timestamp": self.timestamp}
 
 
 class OperationRecord:
@@ -73,7 +69,7 @@ class OperationRecord:
             "params": self.params,
             "result": self.result,
             "page_state": self.page_state.to_dict(),
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
         if self.screenshot:
             record["screenshot"] = self.screenshot
@@ -224,7 +220,7 @@ class BrowserController:
     async def _take_screenshot(self, full_page: bool = False) -> str:
         """Take screenshot and return base64 encoded string."""
         screenshot = await self._page.screenshot(full_page=full_page)
-        return base64.b64encode(screenshot).decode('utf-8')
+        return base64.b64encode(screenshot).decode("utf-8")
 
     async def _wait_for_stable_state(self) -> None:
         """Wait for page to reach stable state."""
@@ -245,8 +241,7 @@ class BrowserController:
             self._error_recovery = ErrorRecovery(self._page, self)
         if not self._retry_wrapper:
             self._retry_wrapper = RetryWrapper(
-                max_retries=self._config["max_retries"],
-                base_delay=self._config["retry_delay"]
+                max_retries=self._config["max_retries"], base_delay=self._config["retry_delay"]
             )
 
     async def _get_smart_selector(self, selector: str) -> Optional[SmartSelector]:
@@ -270,12 +265,7 @@ class BrowserController:
             return None
 
     async def _execute_with_stability(
-        self,
-        action: str,
-        selector: Optional[str],
-        func: Callable,
-        *args,
-        **kwargs
+        self, action: str, selector: Optional[str], func: Callable, *args, **kwargs
     ) -> Any:
         """
         使用稳定性增强执行操作
@@ -302,8 +292,7 @@ class BrowserController:
         try:
             if self._config.get("enable_stability"):
                 return await self._retry_wrapper.execute(
-                    execute,
-                    description=f"{action}: {selector}"
+                    execute, description=f"{action}: {selector}"
                 )
             else:
                 return await execute()
@@ -313,23 +302,17 @@ class BrowserController:
                 recovery = await self._error_recovery.handle_error(e, selector, action)
                 if recovery.recovered and recovery.new_selector:
                     # 使用新选择器重试
-                    kwargs['selector'] = recovery.new_selector
+                    kwargs["selector"] = recovery.new_selector
                     return await func(*args, **kwargs)
             raise
 
     def _make_fuzzy_point(
-        self,
-        fuzzy_reason: Optional[str] = None,
-        fuzzy_hint: Optional[str] = None
+        self, fuzzy_reason: Optional[str] = None, fuzzy_hint: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """Build fuzzy_point dict when caller provides override."""
         if fuzzy_reason is None and fuzzy_hint is None:
             return None
-        return {
-            "requires_judgment": True,
-            "reason": fuzzy_reason or "",
-            "hint": fuzzy_hint
-        }
+        return {"requires_judgment": True, "reason": fuzzy_reason or "", "hint": fuzzy_hint}
 
     async def open(
         self,
@@ -337,7 +320,7 @@ class BrowserController:
         wait_until: str = "networkidle",
         take_screenshot: bool = None,
         fuzzy_reason: Optional[str] = None,
-        fuzzy_hint: Optional[str] = None
+        fuzzy_hint: Optional[str] = None,
     ) -> OperationRecord:
         """
         Open a URL and capture complete state.
@@ -351,7 +334,9 @@ class BrowserController:
             OperationRecord with full context
         """
         step = self._next_step()
-        take_screenshot = take_screenshot if take_screenshot is not None else self._config["auto_screenshot"]
+        take_screenshot = (
+            take_screenshot if take_screenshot is not None else self._config["auto_screenshot"]
+        )
 
         screenshot = None
         error = None
@@ -380,7 +365,7 @@ class BrowserController:
             page_state=page_state,
             screenshot=screenshot,
             error=error,
-            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint)
+            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint),
         )
         self._operation_history.append(record)
         return record
@@ -416,11 +401,12 @@ class BrowserController:
         """
         step = self._next_step()
         timeout = timeout or self._config["timeout"]
-        take_screenshot = take_screenshot if take_screenshot is not None else self._config["auto_screenshot"]
+        take_screenshot = (
+            take_screenshot if take_screenshot is not None else self._config["auto_screenshot"]
+        )
         ident = identifier or selector
         storage = self._get_adaptive_storage()
 
-        screenshot_before = None
         screenshot_after = None
         error = None
         old_url = self._page.url
@@ -435,7 +421,9 @@ class BrowserController:
                 if self._selector_generator:
                     try:
                         smart = await self._selector_generator.generate(el)
-                        selector_candidates = [{"type": c.type.value, "value": c.value} for c in smart.all_selectors()]
+                        selector_candidates = [
+                            {"type": c.type.value, "value": c.value} for c in smart.all_selectors()
+                        ]
                     except Exception:
                         pass
             if el and auto_save and storage:
@@ -443,7 +431,7 @@ class BrowserController:
                 if fp:
                     storage.fingerprint_save(_domain_from_url(self._page.url), ident, fp)
             if take_screenshot:
-                screenshot_before = await self._take_screenshot()
+                await self._take_screenshot()
             if scroll_into_view:
                 await self._page.locator(selector).scroll_into_view_if_needed()
             await self._page.click(selector, timeout=timeout)
@@ -457,11 +445,13 @@ class BrowserController:
                 "success": True,
                 "selector": selector,
                 "navigated": navigated,
-                "new_url": page_state.url if navigated else None
+                "new_url": page_state.url if navigated else None,
             }
         except Exception as e:
             if adaptive and storage:
-                handle = await relocate(self._page, _domain_from_url(self._page.url), ident, storage)
+                handle = await relocate(
+                    self._page, _domain_from_url(self._page.url), ident, storage
+                )
                 if handle:
                     try:
                         await handle.scroll_into_view_if_needed()
@@ -477,11 +467,16 @@ class BrowserController:
                             "selector": selector,
                             "navigated": navigated,
                             "new_url": page_state.url if navigated else None,
-                            "adaptive_used": True
+                            "adaptive_used": True,
                         }
                     except Exception as e2:
                         page_state = await self._get_page_state()
-                        result = {"success": False, "error": str(e2), "selector": selector, "adaptive_used": True}
+                        result = {
+                            "success": False,
+                            "error": str(e2),
+                            "selector": selector,
+                            "adaptive_used": True,
+                        }
                         error = str(e2)
                 else:
                     page_state = await self._get_page_state()
@@ -538,7 +533,9 @@ class BrowserController:
             OperationRecord with input result
         """
         step = self._next_step()
-        take_screenshot = take_screenshot if take_screenshot is not None else self._config["auto_screenshot"]
+        take_screenshot = (
+            take_screenshot if take_screenshot is not None else self._config["auto_screenshot"]
+        )
         ident = identifier or selector
         storage = self._get_adaptive_storage()
 
@@ -555,7 +552,9 @@ class BrowserController:
                 if self._selector_generator:
                     try:
                         smart = await self._selector_generator.generate(el)
-                        selector_candidates = [{"type": c.type.value, "value": c.value} for c in smart.all_selectors()]
+                        selector_candidates = [
+                            {"type": c.type.value, "value": c.value} for c in smart.all_selectors()
+                        ]
                     except Exception:
                         pass
             if el and auto_save and storage:
@@ -574,11 +573,13 @@ class BrowserController:
                 "selector": selector,
                 "text": text,
                 "actual_value": actual_value,
-                "match": actual_value == text
+                "match": actual_value == text,
             }
         except Exception as e:
             if adaptive and storage:
-                handle = await relocate(self._page, _domain_from_url(self._page.url), ident, storage)
+                handle = await relocate(
+                    self._page, _domain_from_url(self._page.url), ident, storage
+                )
                 if handle:
                     try:
                         if clear_first:
@@ -591,10 +592,22 @@ class BrowserController:
                         if take_screenshot:
                             screenshot = await self._take_screenshot()
                         page_state = await self._get_page_state()
-                        result = {"success": True, "selector": selector, "text": text, "actual_value": actual_value, "match": actual_value == text, "adaptive_used": True}
+                        result = {
+                            "success": True,
+                            "selector": selector,
+                            "text": text,
+                            "actual_value": actual_value,
+                            "match": actual_value == text,
+                            "adaptive_used": True,
+                        }
                     except Exception as e2:
                         page_state = await self._get_page_state()
-                        result = {"success": False, "error": str(e2), "selector": selector, "adaptive_used": True}
+                        result = {
+                            "success": False,
+                            "error": str(e2),
+                            "selector": selector,
+                            "adaptive_used": True,
+                        }
                         error = str(e2)
                 else:
                     page_state = await self._get_page_state()
@@ -674,20 +687,38 @@ class BrowserController:
             value = await _get_value_from_el(element)
             screenshot = await self._take_screenshot() if take_screenshot else None
             page_state = await self._get_page_state()
-            result = {"success": True, "selector": selector, "attribute": attr, "value": value.strip() if value else value}
+            result = {
+                "success": True,
+                "selector": selector,
+                "attribute": attr,
+                "value": value.strip() if value else value,
+            }
         except Exception as e:
             if adaptive and storage:
-                handle = await relocate(self._page, _domain_from_url(self._page.url), ident, storage)
+                handle = await relocate(
+                    self._page, _domain_from_url(self._page.url), ident, storage
+                )
                 if handle:
                     try:
                         value = await _get_value_from_el(handle)
                         screenshot = await self._take_screenshot() if take_screenshot else None
                         page_state = await self._get_page_state()
-                        result = {"success": True, "selector": selector, "attribute": attr, "value": value.strip() if value else value, "adaptive_used": True}
+                        result = {
+                            "success": True,
+                            "selector": selector,
+                            "attribute": attr,
+                            "value": value.strip() if value else value,
+                            "adaptive_used": True,
+                        }
                     except Exception as e2:
                         page_state = await self._get_page_state()
                         screenshot = await self._take_screenshot() if take_screenshot else None
-                        result = {"success": False, "error": str(e2), "selector": selector, "adaptive_used": True}
+                        result = {
+                            "success": False,
+                            "error": str(e2),
+                            "selector": selector,
+                            "adaptive_used": True,
+                        }
                         error = str(e2)
                 else:
                     page_state = await self._get_page_state()
@@ -710,7 +741,7 @@ class BrowserController:
             page_state=page_state,
             screenshot=screenshot,
             error=error,
-            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint)
+            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint),
         )
         self._operation_history.append(record)
         return record
@@ -747,7 +778,9 @@ class BrowserController:
 
         try:
             if selector:
-                element = await self._page.wait_for_selector(selector, timeout=self._config["timeout"])
+                element = await self._page.wait_for_selector(
+                    selector, timeout=self._config["timeout"]
+                )
                 if element and auto_save and storage:
                     fp = await extract_fingerprint(element, self._page)
                     if fp:
@@ -761,13 +794,20 @@ class BrowserController:
             result = {"success": True, "selector": selector, "html": html}
         except Exception as e:
             if selector and adaptive and storage:
-                handle = await relocate(self._page, _domain_from_url(self._page.url), ident, storage)
+                handle = await relocate(
+                    self._page, _domain_from_url(self._page.url), ident, storage
+                )
                 if handle:
                     try:
                         html = await handle.inner_html()
                         screenshot = await self._take_screenshot() if take_screenshot else None
                         page_state = await self._get_page_state()
-                        result = {"success": True, "selector": selector, "html": html, "adaptive_used": True}
+                        result = {
+                            "success": True,
+                            "selector": selector,
+                            "html": html,
+                            "adaptive_used": True,
+                        }
                     except Exception as e2:
                         page_state = await self._get_page_state()
                         screenshot = await self._take_screenshot() if take_screenshot else None
@@ -794,7 +834,7 @@ class BrowserController:
             page_state=page_state,
             screenshot=screenshot,
             error=error,
-            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint)
+            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint),
         )
         self._operation_history.append(record)
         return record
@@ -805,7 +845,7 @@ class BrowserController:
         full_page: bool = False,
         selector: Optional[str] = None,
         fuzzy_reason: Optional[str] = None,
-        fuzzy_hint: Optional[str] = None
+        fuzzy_hint: Optional[str] = None,
     ) -> OperationRecord:
         """
         Take a screenshot.
@@ -825,15 +865,17 @@ class BrowserController:
             page_state = await self._get_page_state()
 
             if selector:
-                element = await self._page.wait_for_selector(selector, timeout=self._config["timeout"])
+                element = await self._page.wait_for_selector(
+                    selector, timeout=self._config["timeout"]
+                )
                 screenshot_data = await element.screenshot()
             else:
                 screenshot_data = await self._page.screenshot(full_page=full_page)
 
-            screenshot_b64 = base64.b64encode(screenshot_data).decode('utf-8')
+            screenshot_b64 = base64.b64encode(screenshot_data).decode("utf-8")
 
             if path:
-                with open(path, 'wb') as f:
+                with open(path, "wb") as f:
                     f.write(screenshot_data)
 
             result = {
@@ -841,7 +883,7 @@ class BrowserController:
                 "path": path,
                 "full_page": full_page,
                 "selector": selector,
-                "screenshot": screenshot_b64
+                "screenshot": screenshot_b64,
             }
 
         except Exception as e:
@@ -858,7 +900,7 @@ class BrowserController:
             page_state=page_state,
             screenshot=screenshot_b64,
             error=error,
-            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint)
+            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint),
         )
         self._operation_history.append(record)
         return record
@@ -869,7 +911,7 @@ class BrowserController:
         value: Optional[str] = None,
         timeout: int = None,
         fuzzy_reason: Optional[str] = None,
-        fuzzy_hint: Optional[str] = None
+        fuzzy_hint: Optional[str] = None,
     ) -> OperationRecord:
         """
         Wait for a condition to be true.
@@ -924,7 +966,7 @@ class BrowserController:
             page_state=page_state,
             screenshot=screenshot,
             error=error,
-            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint)
+            fuzzy_point=self._make_fuzzy_point(fuzzy_reason, fuzzy_hint),
         )
         self._operation_history.append(record)
         return record
@@ -934,7 +976,7 @@ class BrowserController:
         schema: Dict[str, Any],
         take_screenshot: bool = True,
         fuzzy_reason: Optional[str] = None,
-        fuzzy_hint: Optional[str] = None
+        fuzzy_hint: Optional[str] = None,
     ) -> OperationRecord:
         """
         Extract structured data based on schema.
@@ -978,10 +1020,10 @@ class BrowserController:
                         value = await element.get_attribute("value")
                     elif field_type == "float":
                         text = await element.text_content() or ""
-                        value = float(text.replace('$', '').replace(',', '').strip())
+                        value = float(text.replace("$", "").replace(",", "").strip())
                     elif field_type == "int":
                         text = await element.text_content() or ""
-                        value = int(''.join(filter(str.isdigit, text)))
+                        value = int("".join(filter(str.isdigit, text)))
                     else:
                         value = await element.text_content()
 
@@ -991,11 +1033,7 @@ class BrowserController:
                     extracted_data[name] = None
                     extracted_data[f"{name}_error"] = str(field_error)
 
-            result = {
-                "success": True,
-                "data": extracted_data,
-                "schema": schema
-            }
+            result = {"success": True, "data": extracted_data, "schema": schema}
 
         except Exception as e:
             page_state = await self._get_page_state()
@@ -1006,7 +1044,7 @@ class BrowserController:
         fuzzy_point = {
             "requires_judgment": True,
             "reason": fuzzy_reason or "需根据 schema 提取可变内容",
-            "hint": fuzzy_hint
+            "hint": fuzzy_hint,
         }
         record = OperationRecord(
             step=step,
@@ -1016,7 +1054,7 @@ class BrowserController:
             page_state=page_state,
             screenshot=screenshot,
             error=error,
-            fuzzy_point=fuzzy_point
+            fuzzy_point=fuzzy_point,
         )
         record.result["ai_node"] = True
         self._operation_history.append(record)

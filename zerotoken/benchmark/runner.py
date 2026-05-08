@@ -3,6 +3,7 @@
 加载 YAML 场景或已录制轨迹，通过 mcp_server.dispatch() 完整链路执行，
 用 BenchmarkRecorder 记录每步调用。
 """
+
 from __future__ import annotations
 
 import time
@@ -18,6 +19,7 @@ from zerotoken.benchmark.recorder import BenchmarkRecorder
 @dataclass
 class StepError:
     """单步执行失败详情"""
+
     seq: int
     action: str
     error: str
@@ -27,6 +29,7 @@ class StepError:
 @dataclass
 class RunResult:
     """单个场景的执行结果"""
+
     scenario_name: str
     session_id: str
     total_steps: int
@@ -40,6 +43,7 @@ class RunResult:
 @dataclass
 class BatchResult:
     """批量执行结果"""
+
     results: list[RunResult] = field(default_factory=list)
     total_scenarios: int = 0
     passed_scenarios: int = 0
@@ -82,10 +86,14 @@ class BenchmarkRunner:
             except Exception as e:
                 error = e
                 result.failed_steps += 1
-                result.errors.append(StepError(
-                    seq=seq, action=action,
-                    error=str(e), duration_ms=0.0,
-                ))
+                result.errors.append(
+                    StepError(
+                        seq=seq,
+                        action=action,
+                        error=str(e),
+                        duration_ms=0.0,
+                    )
+                )
             finally:
                 duration_ms = (time.monotonic() - start) * 1000
                 if result.errors and result.errors[-1].seq == seq:
@@ -113,7 +121,8 @@ class BenchmarkRunner:
             raise ValueError(f"No trajectory for task_id: {task_id}")
 
         script = trajectory_to_script(
-            traj_data, task_id=task_id,
+            traj_data,
+            task_id=task_id,
             prepend_init=True,
             stealth=kw.get("stealth", False),
         )
@@ -142,10 +151,14 @@ class BenchmarkRunner:
             except Exception as e:
                 error = e
                 result.failed_steps += 1
-                result.errors.append(StepError(
-                    seq=seq, action=action,
-                    error=str(e), duration_ms=0.0,
-                ))
+                result.errors.append(
+                    StepError(
+                        seq=seq,
+                        action=action,
+                        error=str(e),
+                        duration_ms=0.0,
+                    )
+                )
             finally:
                 duration_ms = (time.monotonic() - start) * 1000
                 if result.errors and result.errors[-1].seq == seq:
@@ -158,7 +171,9 @@ class BenchmarkRunner:
         return result
 
     async def run_batch(
-        self, scenario_paths: list[str], tags: list[str] | None = None,
+        self,
+        scenario_paths: list[str],
+        tags: list[str] | None = None,
     ) -> BatchResult:
         """批量执行多个场景"""
         filtered = scenario_paths
@@ -193,4 +208,5 @@ class BenchmarkRunner:
     def _jsonl_path(recorder: BenchmarkRecorder) -> str:
         """获取 recorder 对应的 JSONL 文件路径"""
         import os
+
         return os.path.join(recorder._output_dir, f"{recorder.session_id}.jsonl")

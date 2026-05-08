@@ -3,12 +3,14 @@ ScriptEngine: deterministic replay of scripts without LLM.
 Resolves {{varname}} in params, iterates steps, calls BrowserController, writes SessionStore.
 Depends on ScriptEngineStore (minimal interface) to reduce coupling.
 """
+
 import re
 import uuid
 from typing import Any, Dict, List, Optional, Protocol, TYPE_CHECKING, Tuple
 
 if TYPE_CHECKING:
     from zerotoken.controller import BrowserController
+    from zerotoken.storage import SessionStore
 
 
 class ScriptEngineStore(Protocol):
@@ -64,6 +66,7 @@ class ScriptEngineStore(Protocol):
     def dfu_list(self, limit: int = 100) -> List[Dict[str, Any]]: ...
 
     def dfu_load(self, dfu_id: str) -> Optional[Dict[str, Any]]: ...
+
 
 PLACEHOLDER_PATTERN = re.compile(r"\{\{(\w+)\}\}")
 
@@ -148,7 +151,7 @@ class ScriptEngine:
         self, dfu_store: ScriptEngineStore, limit: int = 200
     ) -> List[Dict[str, Any]]:
         items = []
-        for it in (dfu_store.dfu_list(limit=limit) or []):
+        for it in dfu_store.dfu_list(limit=limit) or []:
             dfu_id = it.get("dfu_id")
             if not dfu_id:
                 continue
@@ -224,7 +227,10 @@ class ScriptEngine:
                 "success": False,
                 "status": "failed",
                 "session_id": session_id,
-                "error": {"code": "INVALID_STATE", "message": f"session not paused (status={rt.get('status')})"},
+                "error": {
+                    "code": "INVALID_STATE",
+                    "message": f"session not paused (status={rt.get('status')})",
+                },
             }
         task_id = rt.get("task_id") or "unknown"
         script = store.script_load(task_id)
@@ -233,7 +239,10 @@ class ScriptEngine:
                 "success": False,
                 "status": "failed",
                 "session_id": session_id,
-                "error": {"code": "SCRIPT_NOT_FOUND", "message": f"no script for task_id: {task_id}"},
+                "error": {
+                    "code": "SCRIPT_NOT_FOUND",
+                    "message": f"no script for task_id: {task_id}",
+                },
             }
         steps = list(script.get("steps") or [])
         cursor = int(rt.get("cursor_step_index") or 0)
@@ -281,10 +290,15 @@ class ScriptEngine:
                 "success": False,
                 "status": "failed",
                 "session_id": session_id,
-                "error": {"code": "INVALID_RESOLUTION", "message": f"unknown resolution type: {rtype}"},
+                "error": {
+                    "code": "INVALID_RESOLUTION",
+                    "message": f"unknown resolution type: {rtype}",
+                },
             }
 
-        store.runtime_update(session_id, cursor_step_index=cursor, status="running", pause_event=None)
+        store.runtime_update(
+            session_id, cursor_step_index=cursor, status="running", pause_event=None
+        )
         dfus = self._load_all_dfus(store)
         return await self._run_from_cursor(
             session_id,
@@ -365,11 +379,18 @@ class ScriptEngine:
                         payload={"pause_event": pause_event},
                     )
                     store.runtime_update(session_id, status="paused", pause_event=pause_event)
-                    return {"success": False, "status": "paused", "session_id": session_id, "pause_event": pause_event}
+                    return {
+                        "success": False,
+                        "status": "paused",
+                        "session_id": session_id,
+                        "pause_event": pause_event,
+                    }
 
                 if action == "browser_open":
                     url = params.get("url", "")
-                    record = await controller.open(url, wait_until=params.get("wait_until", "networkidle"))
+                    record = await controller.open(
+                        url, wait_until=params.get("wait_until", "networkidle")
+                    )
                     url_after = getattr(record.page_state, "url", url)
                     store.session_append(
                         session_id,
@@ -418,7 +439,9 @@ class ScriptEngine:
                     for sel in selectors:
                         used_selector = sel
                         try:
-                            record = await controller.input(sel, params.get("text", ""), delay=params.get("delay", 50))
+                            record = await controller.input(
+                                sel, params.get("text", ""), delay=params.get("delay", 50)
+                            )
                             if record and record.result.get("success"):
                                 break
                         except Exception:
@@ -570,7 +593,9 @@ class ScriptEngine:
                 "step_index": step_index,
                 "action": (steps[step_index].get("action") if step_index < len(steps) else None),
                 "params": (steps[step_index].get("params") if step_index < len(steps) else None),
-                "selector_candidates": (steps[step_index].get("selector_candidates") if step_index < len(steps) else []),
+                "selector_candidates": (
+                    steps[step_index].get("selector_candidates") if step_index < len(steps) else []
+                ),
                 "error": {"code": "STEP_FAILED", "message": str(e), "retryable": True},
             }
             store.session_append(
@@ -582,7 +607,12 @@ class ScriptEngine:
                 payload={"pause_event": pause_event},
             )
             store.runtime_update(session_id, status="paused", pause_event=pause_event)
-            return {"success": False, "status": "paused", "session_id": session_id, "pause_event": pause_event}
+            return {
+                "success": False,
+                "status": "paused",
+                "session_id": session_id,
+                "pause_event": pause_event,
+            }
 
     async def run_script(
         self,
@@ -600,5 +630,14 @@ class ScriptEngine:
         if res.get("status") == "success":
             return {"success": True, "session_id": res.get("session_id")}
         if res.get("status") == "paused":
-            return {"success": False, "error": "paused", "session_id": res.get("session_id"), "pause_event": res.get("pause_event")}
-        return {"success": False, "error": (res.get("error") or {}).get("message", "failed"), "session_id": res.get("session_id")}
+            return {
+                "success": False,
+                "error": "paused",
+                "session_id": res.get("session_id"),
+                "pause_event": res.get("pause_event"),
+            }
+        return {
+            "success": False,
+            "error": (res.get("error") or {}).get("message", "failed"),
+            "session_id": res.get("session_id"),
+        }

@@ -2,6 +2,7 @@
 Generate script (v2) from trajectory and save to ScriptStore.
 Maps trajectory operations to script steps with selector_candidates and fuzzy_point.
 """
+
 from typing import Any, Dict, List, Optional
 
 # Trajectory action -> script/MCP action

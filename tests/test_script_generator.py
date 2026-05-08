@@ -1,13 +1,12 @@
 """Tests for generating script from trajectory and saving to ScriptStore."""
+
 import os
 import tempfile
 
 import pytest
 
-from zerotoken.controller import OperationRecord, PageState
 from zerotoken.engine.script_generator import trajectory_to_script, save_script_from_trajectory
 from zerotoken.storage_sqlite import SQLiteStorage
-from zerotoken.trajectory import Trajectory, TrajectoryRecorder
 
 
 @pytest.fixture

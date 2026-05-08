@@ -1,5 +1,4 @@
 """script_generator 单元测试：tab_id 变量化、setup 步骤处理"""
-import pytest
 
 from zerotoken.engine.script_generator import trajectory_to_script, _build_tab_id_mapping
 
@@ -17,7 +16,11 @@ class TestBuildTabIdMapping:
 
     def test_single_new_tab(self):
         ops = [
-            {"action": "new_tab", "params": {}, "result": {"data": {"tab_id": 3, "url": "about:blank"}}},
+            {
+                "action": "new_tab",
+                "params": {},
+                "result": {"data": {"tab_id": 3, "url": "about:blank"}},
+            },
         ]
         mapping = _build_tab_id_mapping(ops)
         assert mapping == {3: "_new_tab_0"}
@@ -37,8 +40,11 @@ class TestTrajectoryToScriptTabMapping:
 
     def test_new_tab_gets_assign_to(self):
         ops = [
-            {"action": "new_tab", "params": {"url": "https://b.com"},
-             "result": {"data": {"tab_id": 3, "url": "https://b.com"}}},
+            {
+                "action": "new_tab",
+                "params": {"url": "https://b.com"},
+                "result": {"data": {"tab_id": 3, "url": "https://b.com"}},
+            },
         ]
         script = trajectory_to_script(_make_trajectory(ops), prepend_init=False)
         new_tab_step = script["steps"][0]
@@ -46,8 +52,11 @@ class TestTrajectoryToScriptTabMapping:
 
     def test_close_tab_uses_variable_reference(self):
         ops = [
-            {"action": "new_tab", "params": {"url": "https://a.com"},
-             "result": {"data": {"tab_id": 3}}},
+            {
+                "action": "new_tab",
+                "params": {"url": "https://a.com"},
+                "result": {"data": {"tab_id": 3}},
+            },
             {"action": "close_tab", "params": {"tab_id": 3}},
         ]
         script = trajectory_to_script(_make_trajectory(ops), prepend_init=False)
@@ -56,8 +65,7 @@ class TestTrajectoryToScriptTabMapping:
 
     def test_switch_tab_uses_variable_reference(self):
         ops = [
-            {"action": "new_tab", "params": {},
-             "result": {"data": {"tab_id": 5}}},
+            {"action": "new_tab", "params": {}, "result": {"data": {"tab_id": 5}}},
             {"action": "switch_tab", "params": {"tab_id": 5}},
         ]
         script = trajectory_to_script(_make_trajectory(ops), prepend_init=False)
@@ -76,12 +84,21 @@ class TestTrajectoryToScriptTabMapping:
         """完整的多标签页录制 -> 脚本生成场景"""
         ops = [
             {"action": "open", "params": {"url": "https://main.com"}},
-            {"action": "new_tab", "params": {"url": "https://a.com"},
-             "result": {"data": {"tab_id": 1}}},
-            {"action": "new_tab", "params": {"url": "https://b.com"},
-             "result": {"data": {"tab_id": 2}}},
-            {"action": "new_tab", "params": {"url": "https://c.com"},
-             "result": {"data": {"tab_id": 3}}},
+            {
+                "action": "new_tab",
+                "params": {"url": "https://a.com"},
+                "result": {"data": {"tab_id": 1}},
+            },
+            {
+                "action": "new_tab",
+                "params": {"url": "https://b.com"},
+                "result": {"data": {"tab_id": 2}},
+            },
+            {
+                "action": "new_tab",
+                "params": {"url": "https://c.com"},
+                "result": {"data": {"tab_id": 3}},
+            },
             {"action": "close_tab", "params": {"tab_id": 3}},
             {"action": "close_tab", "params": {"tab_id": 2}},
             {"action": "close_tab", "params": {"tab_id": 1}},

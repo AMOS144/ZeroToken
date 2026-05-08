@@ -1,4 +1,5 @@
 """脚本 MCP 工具定义 & 分发"""
+
 from __future__ import annotations
 
 import json
@@ -24,147 +25,243 @@ def script_tools() -> list[Tool]:
         Tool(
             name="script_save",
             description="Save a script to the database (overwrites if task_id exists)",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID (script key)"},
-                "goal": {"type": "string", "description": "Goal description"},
-                "steps": {"type": "array", "description": "List of steps: {action, params, ...}"},
-            }, required=["task_id", "goal", "steps"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID (script key)"},
+                    "goal": {"type": "string", "description": "Goal description"},
+                    "steps": {
+                        "type": "array",
+                        "description": "List of steps: {action, params, ...}",
+                    },
+                },
+                required=["task_id", "goal", "steps"],
+            ),
         ),
         Tool(
             name="script_load",
             description="Load a script by task_id",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID"},
+                },
+                required=["task_id"],
+            ),
         ),
         Tool(
             name="script_list",
             description="List scripts in the database (default: only active)",
-            inputSchema=_obj_schema({
-                "limit": {"type": "integer", "description": "Max number to return", "default": 100},
-                "status": {"type": "string", "description": "Filter by status: active / warning / deprecated / all (default: active)"},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max number to return",
+                        "default": 100,
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Filter by status: active / warning / deprecated / all (default: active)",
+                    },
+                }
+            ),
         ),
         Tool(
             name="script_delete",
             description="Delete a script by task_id",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string"},
+                },
+                required=["task_id"],
+            ),
         ),
         Tool(
             name="script_deprecate",
             description="Mark a script as deprecated (soft delete). Deprecated scripts are excluded from script_list by default and rejected by script_run.",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID to deprecate"},
-                "reason": {"type": "string", "description": "Why the script is being deprecated"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID to deprecate"},
+                    "reason": {
+                        "type": "string",
+                        "description": "Why the script is being deprecated",
+                    },
+                },
+                required=["task_id"],
+            ),
         ),
         Tool(
             name="script_restore",
             description="Restore a deprecated script to active status",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID to restore"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID to restore"},
+                },
+                required=["task_id"],
+            ),
         ),
         Tool(
             name="script_health",
             description="Get script health metrics: status, consecutive failures, total runs, success rate",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID"},
+                },
+                required=["task_id"],
+            ),
         ),
         # -- 脚本生成 --
         Tool(
             name="script_generate",
             description="Generate a script from a saved trajectory",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID of the trajectory to convert"},
-                "script_task_id": {"type": "string", "description": "Optional output script task_id (default: same as task_id)"},
-                "prepend_init": {"type": "boolean", "description": "Prepend browser_init + trajectory_start", "default": True},
-                "stealth": {"type": "boolean", "description": "Include stealth in browser_init", "default": False},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {
+                        "type": "string",
+                        "description": "Task ID of the trajectory to convert",
+                    },
+                    "script_task_id": {
+                        "type": "string",
+                        "description": "Optional output script task_id (default: same as task_id)",
+                    },
+                    "prepend_init": {
+                        "type": "boolean",
+                        "description": "Prepend browser_init + trajectory_start",
+                        "default": True,
+                    },
+                    "stealth": {
+                        "type": "boolean",
+                        "description": "Include stealth in browser_init",
+                        "default": False,
+                    },
+                },
+                required=["task_id"],
+            ),
         ),
         # -- 绑定 CRUD --
         Tool(
             name="script_bind",
             description="Bind an external job_id to a script task_id with optional default vars",
-            inputSchema=_obj_schema({
-                "binding_key": {"type": "string", "description": "External job identifier"},
-                "script_task_id": {"type": "string", "description": "ZeroToken script task_id"},
-                "description": {"type": "string", "description": "Optional description"},
-                "default_vars": {"type": "object", "description": "Optional default vars"},
-            }, required=["binding_key", "script_task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "binding_key": {"type": "string", "description": "External job identifier"},
+                    "script_task_id": {"type": "string", "description": "ZeroToken script task_id"},
+                    "description": {"type": "string", "description": "Optional description"},
+                    "default_vars": {"type": "object", "description": "Optional default vars"},
+                },
+                required=["binding_key", "script_task_id"],
+            ),
         ),
         Tool(
             name="script_bind_get",
             description="Get a script binding by binding_key",
-            inputSchema=_obj_schema({
-                "binding_key": {"type": "string"},
-            }, required=["binding_key"]),
+            inputSchema=_obj_schema(
+                {
+                    "binding_key": {"type": "string"},
+                },
+                required=["binding_key"],
+            ),
         ),
         Tool(
             name="script_bind_list",
             description="List script bindings",
-            inputSchema=_obj_schema({
-                "limit": {"type": "integer", "default": 100},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "limit": {"type": "integer", "default": 100},
+                }
+            ),
         ),
         Tool(
             name="script_bind_delete",
             description="Delete a script binding by binding_key",
-            inputSchema=_obj_schema({
-                "binding_key": {"type": "string"},
-            }, required=["binding_key"]),
+            inputSchema=_obj_schema(
+                {
+                    "binding_key": {"type": "string"},
+                },
+                required=["binding_key"],
+            ),
         ),
         # -- Session --
         Tool(
             name="script_session_list",
             description="List sessions from the database",
-            inputSchema=_obj_schema({
-                "limit": {"type": "integer", "default": 100},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "limit": {"type": "integer", "default": 100},
+                }
+            ),
         ),
         Tool(
             name="script_session_get",
             description="Get session steps by session_id",
-            inputSchema=_obj_schema({
-                "session_id": {"type": "string"},
-            }, required=["session_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "session_id": {"type": "string"},
+                },
+                required=["session_id"],
+            ),
         ),
         # -- 优化 --
         Tool(
             name="script_optimize",
             description="Analyze a script/trajectory and return optimization suggestions for AI to apply (pruning, parameterization, branching)",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID of script or trajectory to optimize"},
-                "source": {"type": "string", "description": "Source type: script or trajectory (default: script)"},
-                "hints": {"type": "string", "description": "Optional optimization hints from user (e.g. 'parameterize the search keyword')"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {
+                        "type": "string",
+                        "description": "Task ID of script or trajectory to optimize",
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "Source type: script or trajectory (default: script)",
+                    },
+                    "hints": {
+                        "type": "string",
+                        "description": "Optional optimization hints from user (e.g. 'parameterize the search keyword')",
+                    },
+                },
+                required=["task_id"],
+            ),
         ),
         # -- 执行 --
         Tool(
             name="script_run",
             description="Start running a script (provide task_id) or resume a paused session (provide session_id)",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Start mode: task_id of script"},
-                "vars": {"type": "object", "description": "Start mode: {{varname}} replacements"},
-                "session_id": {"type": "string", "description": "Resume mode: session_id to resume"},
-                "resolution": {"type": "object", "description": "Resume mode: resolution object"},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Start mode: task_id of script"},
+                    "vars": {
+                        "type": "object",
+                        "description": "Start mode: {{varname}} replacements",
+                    },
+                    "session_id": {
+                        "type": "string",
+                        "description": "Resume mode: session_id to resume",
+                    },
+                    "resolution": {
+                        "type": "object",
+                        "description": "Resume mode: resolution object",
+                    },
+                }
+            ),
         ),
         Tool(
             name="script_resume",
             description="Resume a paused script session with a resolution",
-            inputSchema=_obj_schema({
-                "session_id": {"type": "string", "description": "Session ID to resume"},
-                "resolution": {"type": "object", "description": "Resolution object {type, note?, patch?}"},
-            }, required=["session_id", "resolution"]),
+            inputSchema=_obj_schema(
+                {
+                    "session_id": {"type": "string", "description": "Session ID to resume"},
+                    "resolution": {
+                        "type": "object",
+                        "description": "Resolution object {type, note?, patch?}",
+                    },
+                },
+                required=["session_id", "resolution"],
+            ),
         ),
     ]
 
 
 # --------------- 辅助 ---------------
+
 
 def _resp(data: Any) -> list[TextContent]:
     return [TextContent(type="text", text=json.dumps(data, ensure_ascii=False, default=str))]
@@ -234,7 +331,9 @@ def _format_steps_for_ai(steps: list[dict]) -> str:
 
 
 def _load_optimize_source(
-    task_id: str, source: str, script_svc: Any,
+    task_id: str,
+    source: str,
+    script_svc: Any,
 ) -> tuple[str, str] | tuple[None, str]:
     """加载优化源数据，返回 (goal, steps_text)，失败返回 (None, error_code)"""
     if source == "trajectory":
@@ -275,25 +374,30 @@ def _build_optimize_prompt(args: dict[str, Any], script_svc: Any) -> list[TextCo
     ]
     if hints:
         sections.extend(["### 用户额外提示", "", hints, ""])
-    sections.extend([
-        "### 输出要求",
-        "",
-        "分析完成后，请调用 `script_save` 保存优化后的脚本：",
-        f'- `task_id`: `"{task_id}_optimized"` (或用户指定的名称)',
-        "- `goal`: 保持不变",
-        "- `steps`: 优化后的步骤数组",
-        "",
-        _STEP_FORMAT_REFERENCE,
-    ])
+    sections.extend(
+        [
+            "### 输出要求",
+            "",
+            "分析完成后，请调用 `script_save` 保存优化后的脚本：",
+            f'- `task_id`: `"{task_id}_optimized"` (或用户指定的名称)',
+            "- `goal`: 保持不变",
+            "- `steps`: 优化后的步骤数组",
+            "",
+            _STEP_FORMAT_REFERENCE,
+        ]
+    )
 
-    return _resp({
-        "success": True,
-        "task_id": task_id,
-        "optimization_prompt": "\n".join(sections),
-    })
+    return _resp(
+        {
+            "success": True,
+            "task_id": task_id,
+            "optimization_prompt": "\n".join(sections),
+        }
+    )
 
 
 # --------------- 分发 ---------------
+
 
 async def handle_script_tool(
     name: str,
@@ -332,7 +436,8 @@ async def handle_script_tool(
         if name == "script_deprecate":
             try:
                 result = script_svc.script_deprecate(
-                    args["task_id"], reason=args.get("reason", ""),
+                    args["task_id"],
+                    reason=args.get("reason", ""),
                 )
             except KeyError:
                 return _err(
@@ -370,7 +475,13 @@ async def handle_script_tool(
                 prepend_init=args.get("prepend_init", True),
                 stealth=args.get("stealth", False),
             )
-            return _resp({"success": True, "task_id": out_task_id, "message": "Script generated from trajectory"})
+            return _resp(
+                {
+                    "success": True,
+                    "task_id": out_task_id,
+                    "message": "Script generated from trajectory",
+                }
+            )
 
         # -- 绑定 --
         if name == "script_bind":
@@ -380,12 +491,20 @@ async def handle_script_tool(
                 description=args.get("description", ""),
                 default_vars=args.get("default_vars") or {},
             )
-            return _resp({"success": True, "binding_key": args["binding_key"], "script_task_id": args["script_task_id"]})
+            return _resp(
+                {
+                    "success": True,
+                    "binding_key": args["binding_key"],
+                    "script_task_id": args["script_task_id"],
+                }
+            )
 
         if name == "script_bind_get":
             binding = script_svc.binding_get(args["binding_key"])
             if binding is None:
-                return _err(f"No binding for key: {args['binding_key']}", code="SCRIPT_BINDING_NOT_FOUND")
+                return _err(
+                    f"No binding for key: {args['binding_key']}", code="SCRIPT_BINDING_NOT_FOUND"
+                )
             return _resp({"success": True, "binding": binding})
 
         if name == "script_bind_list":
@@ -419,11 +538,14 @@ async def handle_script_tool(
                 return _err("Browser not initialized", code="BROWSER_NOT_READY")
             if task_id:
                 result = await script_svc.run_script(
-                    task_id, browser_svc, vars=args.get("vars") or {},
+                    task_id,
+                    browser_svc,
+                    vars=args.get("vars") or {},
                 )
                 return _resp(result)
             else:
                 from zerotoken.models.session import Resolution
+
                 resolution = Resolution(**(args.get("resolution") or {"type": "retry"}))
                 result = await script_svc.resume_script(session_id, resolution, browser_svc)
                 return _resp(result)
@@ -432,9 +554,12 @@ async def handle_script_tool(
             if browser_svc is None:
                 return _err("Browser not initialized", code="BROWSER_NOT_READY")
             from zerotoken.models.session import Resolution
+
             resolution = Resolution(**args["resolution"])
             result = await script_svc.resume_script(
-                args["session_id"], resolution, browser_svc,
+                args["session_id"],
+                resolution,
+                browser_svc,
             )
             return _resp(result)
 

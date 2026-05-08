@@ -1,4 +1,5 @@
 """存储层协议定义（Protocol，非 ABC）"""
+
 from __future__ import annotations
 
 from typing import Any, Protocol
@@ -18,7 +19,9 @@ class ScriptRepo(Protocol):
     def script_load(self, task_id: str) -> dict[str, Any] | None: ...
 
     def script_list(
-        self, limit: int = 100, status: str = "active",
+        self,
+        limit: int = 100,
+        status: str = "active",
     ) -> list[dict[str, Any]]: ...
 
     def script_delete(self, task_id: str) -> dict[str, Any]: ...
@@ -26,7 +29,10 @@ class ScriptRepo(Protocol):
     def health(self, task_id: str) -> dict[str, Any] | None: ...
 
     def record_run_result(
-        self, task_id: str, terminal_status: str, session_id: str,
+        self,
+        task_id: str,
+        terminal_status: str,
+        session_id: str,
     ) -> dict[str, Any]: ...
 
     def deprecate(self, task_id: str, *, reason: str = "") -> dict[str, Any]: ...
@@ -96,9 +102,7 @@ class RuntimeRepo(Protocol):
 
     def runtime_update(self, session_id: str, **fields: Any) -> None: ...
 
-    def find_paused_before(
-        self, task_id: str, cutoff_iso: str
-    ) -> list[dict[str, Any]]: ...
+    def find_paused_before(self, task_id: str, cutoff_iso: str) -> list[dict[str, Any]]: ...
 
 
 class FingerprintRepo(Protocol):
@@ -106,9 +110,7 @@ class FingerprintRepo(Protocol):
         self, domain: str, identifier: str, fingerprint_dict: dict[str, Any]
     ) -> None: ...
 
-    def fingerprint_load(
-        self, domain: str, identifier: str
-    ) -> dict[str, Any] | None: ...
+    def fingerprint_load(self, domain: str, identifier: str) -> dict[str, Any] | None: ...
 
     def fingerprint_delete(self, domain: str, identifier: str) -> bool: ...
 

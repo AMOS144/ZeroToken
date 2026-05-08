@@ -1,10 +1,9 @@
 # tests/unit/test_benchmark/test_recorder.py
 """BenchmarkRecorder 单元测试"""
+
 import json
 import os
 import tempfile
-
-import pytest
 
 
 def test_disabled_by_default(monkeypatch):

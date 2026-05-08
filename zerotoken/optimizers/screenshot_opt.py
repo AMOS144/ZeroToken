@@ -6,6 +6,7 @@
 - compressed : JPEG 压缩 + 降分辨率（默认 quality=50, max_width=800）
 - thumbnail  : 极小缩略图（默认 200px 宽, quality=30）
 """
+
 from __future__ import annotations
 
 from typing import Optional

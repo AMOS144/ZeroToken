@@ -1,4 +1,5 @@
 """FlowExecutor 测试：if/loop/assign + 动作步骤执行"""
+
 import pytest
 from unittest.mock import AsyncMock
 from zerotoken.models.script import ScriptStep
@@ -181,9 +182,13 @@ async def test_loop_max_iterations():
 
     runner = AsyncMock(return_value=_ok_record())
     steps = [
-        ScriptStep(action="loop", condition="True", body=[
-            ScriptStep(action="browser_click", params={"selector": "#x"}),
-        ]),
+        ScriptStep(
+            action="loop",
+            condition="True",
+            body=[
+                ScriptStep(action="browser_click", params={"selector": "#x"}),
+            ],
+        ),
     ]
     env = VarsEnvironment()
     executor = FlowExecutor(env, runner, max_loop_iterations=10)

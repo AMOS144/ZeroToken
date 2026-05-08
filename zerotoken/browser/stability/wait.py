@@ -13,23 +13,25 @@ import time
 
 class WaitCondition(Enum):
     """等待条件类型"""
-    SELECTOR = "selector"           # 等待元素出现
-    VISIBLE = "visible"             # 等待元素可见
-    HIDDEN = "hidden"               # 等待元素隐藏
-    NAVIGATION = "navigation"       # 等待导航完成
-    NETWORK_IDLE = "network_idle"   # 等待网络空闲
-    LOAD_STATE = "load_state"       # 等待加载状态
-    TEXT = "text"                   # 等待文本出现
-    FUNCTION = "function"           # 等待函数返回 true
+
+    SELECTOR = "selector"  # 等待元素出现
+    VISIBLE = "visible"  # 等待元素可见
+    HIDDEN = "hidden"  # 等待元素隐藏
+    NAVIGATION = "navigation"  # 等待导航完成
+    NETWORK_IDLE = "network_idle"  # 等待网络空闲
+    LOAD_STATE = "load_state"  # 等待加载状态
+    TEXT = "text"  # 等待文本出现
+    FUNCTION = "function"  # 等待函数返回 true
 
 
 @dataclass
 class WaitConfig:
     """等待配置"""
-    timeout: float = 30000          # 默认超时 (ms)
-    retry_interval: float = 100     # 重试间隔 (ms)
-    poll_interval: float = 50       # 轮询间隔 (ms)
-    max_retries: int = 3            # 最大重试次数
+
+    timeout: float = 30000  # 默认超时 (ms)
+    retry_interval: float = 100  # 重试间隔 (ms)
+    poll_interval: float = 50  # 轮询间隔 (ms)
+    max_retries: int = 3  # 最大重试次数
     wait_network_idle: bool = True  # 是否等待网络空闲
 
 
@@ -42,7 +44,7 @@ class WaitForResult:
         condition: WaitCondition,
         elapsed_ms: float,
         error: Optional[str] = None,
-        retries: int = 0
+        retries: int = 0,
     ):
         self.success = success
         self.condition = condition
@@ -56,7 +58,7 @@ class WaitForResult:
             "condition": self.condition.value,
             "elapsed_ms": self.elapsed_ms,
             "error": self.error,
-            "retries": self.retries
+            "retries": self.retries,
         }
 
 
@@ -78,7 +80,7 @@ class SmartWait:
         condition: WaitCondition,
         value: Optional[str] = None,
         timeout: Optional[float] = None,
-        description: str = ""
+        description: str = "",
     ) -> WaitForResult:
         """
         智能等待
@@ -127,7 +129,7 @@ class SmartWait:
             condition=condition,
             elapsed_ms=elapsed_ms,
             error=error,
-            retries=retries
+            retries=retries,
         )
 
         self._wait_history.append(result)
@@ -165,8 +167,7 @@ class SmartWait:
         """等待文本出现。使用 json.dumps 安全转义，防止 JS 注入。"""
         safe_text = json.dumps(text)
         await self.page.wait_for_function(
-            f"document.body.innerText.includes({safe_text})",
-            timeout=timeout
+            f"document.body.innerText.includes({safe_text})", timeout=timeout
         )
 
     async def _wait_function(self, function: str, timeout: float) -> None:
@@ -177,7 +178,7 @@ class SmartWait:
         self,
         selector: str,
         before_action: Optional[Callable] = None,
-        after_action: Optional[Callable] = None
+        after_action: Optional[Callable] = None,
     ) -> Dict[str, WaitForResult]:
         """
         操作前后的智能等待
@@ -201,9 +202,7 @@ class SmartWait:
 
         # 阶段 1: 等待元素可操作
         results["before"] = await self.wait_for(
-            WaitCondition.VISIBLE,
-            selector,
-            description="等待元素可见"
+            WaitCondition.VISIBLE, selector, description="等待元素可见"
         )
 
         if not results["before"].success:
@@ -217,8 +216,7 @@ class SmartWait:
 
         # 阶段 4: 等待页面稳定
         results["after"] = await self.wait_for(
-            WaitCondition.NETWORK_IDLE,
-            description="等待网络空闲"
+            WaitCondition.NETWORK_IDLE, description="等待网络空闲"
         )
 
         # 阶段 5: 执行操作后检查
@@ -227,11 +225,7 @@ class SmartWait:
 
         return results
 
-    async def wait_stable(
-        self,
-        timeout: float = 5000,
-        stable_window: float = 500
-    ) -> bool:
+    async def wait_stable(self, timeout: float = 5000, stable_window: float = 500) -> bool:
         """
         等待页面稳定
 
@@ -277,7 +271,7 @@ class SmartWait:
         self,
         condition: WaitCondition,
         value: Optional[str] = None,
-        max_retries: Optional[int] = None
+        max_retries: Optional[int] = None,
     ) -> WaitForResult:
         """
         带重试的等待
@@ -320,7 +314,7 @@ class SmartWait:
             condition=condition,
             elapsed_ms=elapsed_ms,
             error=last_error,
-            retries=retries
+            retries=retries,
         )
 
     def get_wait_history(self) -> List[Dict[str, Any]]:
@@ -351,47 +345,37 @@ class WaitChain:
 
     def wait_for_selector(self, selector: str, timeout: float = None) -> "WaitChain":
         """添加等待元素出现"""
-        self._conditions.append({
-            "condition": WaitCondition.SELECTOR,
-            "value": selector,
-            "timeout": timeout
-        })
+        self._conditions.append(
+            {"condition": WaitCondition.SELECTOR, "value": selector, "timeout": timeout}
+        )
         return self
 
     def wait_for_visible(self, selector: str = None, timeout: float = None) -> "WaitChain":
         """添加等待元素可见"""
-        self._conditions.append({
-            "condition": WaitCondition.VISIBLE,
-            "value": selector,
-            "timeout": timeout
-        })
+        self._conditions.append(
+            {"condition": WaitCondition.VISIBLE, "value": selector, "timeout": timeout}
+        )
         return self
 
     def wait_for_hidden(self, selector: str, timeout: float = None) -> "WaitChain":
         """添加等待元素隐藏"""
-        self._conditions.append({
-            "condition": WaitCondition.HIDDEN,
-            "value": selector,
-            "timeout": timeout
-        })
+        self._conditions.append(
+            {"condition": WaitCondition.HIDDEN, "value": selector, "timeout": timeout}
+        )
         return self
 
     def wait_for_network_idle(self, timeout: float = None) -> "WaitChain":
         """添加等待网络空闲"""
-        self._conditions.append({
-            "condition": WaitCondition.NETWORK_IDLE,
-            "value": None,
-            "timeout": timeout
-        })
+        self._conditions.append(
+            {"condition": WaitCondition.NETWORK_IDLE, "value": None, "timeout": timeout}
+        )
         return self
 
     def wait_for_text(self, text: str, timeout: float = None) -> "WaitChain":
         """添加等待文本出现"""
-        self._conditions.append({
-            "condition": WaitCondition.TEXT,
-            "value": text,
-            "timeout": timeout
-        })
+        self._conditions.append(
+            {"condition": WaitCondition.TEXT, "value": text, "timeout": timeout}
+        )
         return self
 
     async def execute(self) -> Dict[str, Any]:
@@ -406,9 +390,7 @@ class WaitChain:
 
         for condition in self._conditions:
             result = await self.smart_wait.wait_for(
-                condition["condition"],
-                condition.get("value"),
-                condition.get("timeout")
+                condition["condition"], condition.get("value"), condition.get("timeout")
             )
             self._results.append(result)
 
@@ -419,5 +401,5 @@ class WaitChain:
         return {
             "success": all_success,
             "results": [r.to_dict() for r in self._results],
-            "total_elapsed_ms": sum(r.elapsed_ms for r in self._results)
+            "total_elapsed_ms": sum(r.elapsed_ms for r in self._results),
         }

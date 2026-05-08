@@ -2,6 +2,7 @@
 Storage interfaces for ZeroToken: scripts, trajectories, sessions.
 MCP and Engine depend on these abstractions; implementation is SQLite by default.
 """
+
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
@@ -202,9 +203,7 @@ class AdaptiveStore(ABC):
         ...
 
     @abstractmethod
-    def fingerprint_load(
-        self, domain: str, identifier: str
-    ) -> Optional[Dict[str, Any]]:
+    def fingerprint_load(self, domain: str, identifier: str) -> Optional[Dict[str, Any]]:
         """Load fingerprint for (domain, identifier). Returns None if not found."""
         ...
 

@@ -12,10 +12,7 @@ class TestPageState:
 
     def test_create_page_state(self):
         """Test creating PageState."""
-        state = PageState(
-            url="https://example.com",
-            title="Example"
-        )
+        state = PageState(url="https://example.com", title="Example")
         assert state.url == "https://example.com"
         assert state.title == "Example"
         assert state.html is None
@@ -24,18 +21,13 @@ class TestPageState:
     def test_create_page_state_with_html(self):
         """Test creating PageState with HTML."""
         state = PageState(
-            url="https://example.com",
-            title="Example",
-            html="<html><body>Test</body></html>"
+            url="https://example.com", title="Example", html="<html><body>Test</body></html>"
         )
         assert state.html == "<html><body>Test</body></html>"
 
     def test_to_dict(self):
         """Test converting PageState to dict."""
-        state = PageState(
-            url="https://example.com",
-            title="Example"
-        )
+        state = PageState(url="https://example.com", title="Example")
         result = state.to_dict()
         assert result["url"] == "https://example.com"
         assert result["title"] == "Example"
@@ -53,7 +45,7 @@ class TestOperationRecord:
             action="click",
             params={"selector": "#button"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         assert record.step == 1
         assert record.action == "click"
@@ -70,7 +62,7 @@ class TestOperationRecord:
             params={"selector": "#button"},
             result={"success": True},
             page_state=page_state,
-            screenshot="base64_data"
+            screenshot="base64_data",
         )
         assert record.screenshot == "base64_data"
 
@@ -83,7 +75,7 @@ class TestOperationRecord:
             params={"selector": "#button"},
             result={"success": False},
             page_state=page_state,
-            error="Element not found"
+            error="Element not found",
         )
         assert record.error == "Element not found"
 
@@ -96,7 +88,7 @@ class TestOperationRecord:
             params={"selector": "#button"},
             result={"success": True},
             page_state=page_state,
-            screenshot="base64_data"
+            screenshot="base64_data",
         )
         result = record.to_dict()
         assert result["step"] == 1
@@ -113,7 +105,7 @@ class TestOperationRecord:
             action="click",
             params={"selector": "#button"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         result = record.to_dict()
         assert "screenshot" not in result
@@ -158,7 +150,7 @@ class TestBrowserController:
         async def mock_start():
             return mock_playwright
 
-        with patch('zerotoken.controller.async_playwright') as mock_cls:
+        with patch("zerotoken.controller.async_playwright") as mock_cls:
             mock_cls.return_value.start = mock_start
 
             await controller.start(headless=True)
@@ -186,7 +178,7 @@ class TestBrowserController:
         async def mock_start():
             return mock_playwright
 
-        with patch('zerotoken.controller.async_playwright') as mock_cls:
+        with patch("zerotoken.controller.async_playwright") as mock_cls:
             mock_cls.return_value.start = mock_start
 
             await controller.start(headless=True, stealth=True)
@@ -430,11 +422,7 @@ class TestBrowserController:
         mock_element.text_content.return_value = "$100.00"
         controller._page.wait_for_selector.return_value = mock_element
 
-        schema = {
-            "fields": [
-                {"name": "price", "selector": ".price", "type": "float"}
-            ]
-        }
+        schema = {"fields": [{"name": "price", "selector": ".price", "type": "float"}]}
 
         record = await controller.extract_data(schema)
 
@@ -457,7 +445,7 @@ class TestBrowserController:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         controller._operation_history.append(record1)
 
@@ -476,7 +464,7 @@ class TestBrowserController:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         controller._operation_history.append(record1)
 

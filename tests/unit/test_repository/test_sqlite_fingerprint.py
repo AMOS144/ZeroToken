@@ -1,10 +1,12 @@
 """SQLiteFingerprintRepo 测试"""
+
 import pytest
 
 
 @pytest.fixture
 def repo():
     from zerotoken.repository.sqlite import SQLiteFingerprintRepo, new_connection
+
     conn = new_connection(":memory:")
     return SQLiteFingerprintRepo(conn)
 

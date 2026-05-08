@@ -1,4 +1,5 @@
 """页面状态摘要测试"""
+
 import pytest
 from unittest.mock import AsyncMock
 
@@ -10,13 +11,15 @@ async def test_summarize_page_basic():
     mock_page = AsyncMock()
     mock_page.url = "https://example.com"
     mock_page.title = AsyncMock(return_value="Example Page")
-    mock_page.evaluate = AsyncMock(side_effect=[
-        [{"tag": "form", "id": "login", "fields": ["username", "password"]}],
-        [{"text": "Home", "href": "/"}],
-        [{"text": "Submit", "tag": "button"}],
-        "This is the main content of the page.",
-        42,
-    ])
+    mock_page.evaluate = AsyncMock(
+        side_effect=[
+            [{"tag": "form", "id": "login", "fields": ["username", "password"]}],
+            [{"text": "Home", "href": "/"}],
+            [{"text": "Submit", "tag": "button"}],
+            "This is the main content of the page.",
+            42,
+        ]
+    )
     result = await summarize_page(mock_page)
     assert result["url"] == "https://example.com"
     assert result["title"] == "Example Page"

@@ -48,28 +48,63 @@ async def test_extract_fingerprint_structure():
 
 
 def test_similarity_score_identical():
-    fp = {"parent": {"tag": "div", "attrs": {"class": "x"}, "text": "a"}, "self": {"tag": "a", "attrs": {"id": "i1"}, "text": "Link", "siblings": ["span"], "path": ["div", "a"]}}
+    fp = {
+        "parent": {"tag": "div", "attrs": {"class": "x"}, "text": "a"},
+        "self": {
+            "tag": "a",
+            "attrs": {"id": "i1"},
+            "text": "Link",
+            "siblings": ["span"],
+            "path": ["div", "a"],
+        },
+    }
     assert similarity_score(fp, fp) == 1.0
 
 
 def test_similarity_score_different_tag():
-    fp1 = {"parent": {"tag": "div", "attrs": {}, "text": ""}, "self": {"tag": "a", "attrs": {}, "text": "x", "siblings": [], "path": ["a"]}}
-    fp2 = {"parent": {"tag": "div", "attrs": {}, "text": ""}, "self": {"tag": "button", "attrs": {}, "text": "x", "siblings": [], "path": ["button"]}}
+    fp1 = {
+        "parent": {"tag": "div", "attrs": {}, "text": ""},
+        "self": {"tag": "a", "attrs": {}, "text": "x", "siblings": [], "path": ["a"]},
+    }
+    fp2 = {
+        "parent": {"tag": "div", "attrs": {}, "text": ""},
+        "self": {"tag": "button", "attrs": {}, "text": "x", "siblings": [], "path": ["button"]},
+    }
     s = similarity_score(fp1, fp2)
     assert 0 <= s < 1.0
 
 
 def test_similarity_score_same_tag_and_text():
-    fp1 = {"parent": {"tag": "div", "attrs": {}, "text": ""}, "self": {"tag": "a", "attrs": {"href": "#"}, "text": "Click", "siblings": [], "path": ["div", "a"]}}
-    fp2 = {"parent": {"tag": "div", "attrs": {}, "text": ""}, "self": {"tag": "a", "attrs": {"href": "#"}, "text": "Click", "siblings": [], "path": ["div", "a"]}}
+    fp1 = {
+        "parent": {"tag": "div", "attrs": {}, "text": ""},
+        "self": {
+            "tag": "a",
+            "attrs": {"href": "#"},
+            "text": "Click",
+            "siblings": [],
+            "path": ["div", "a"],
+        },
+    }
+    fp2 = {
+        "parent": {"tag": "div", "attrs": {}, "text": ""},
+        "self": {
+            "tag": "a",
+            "attrs": {"href": "#"},
+            "text": "Click",
+            "siblings": [],
+            "path": ["div", "a"],
+        },
+    }
     assert similarity_score(fp1, fp2) >= 0.8
 
 
 @pytest.mark.asyncio
 async def test_relocate_no_stored_returns_none(tmp_path):
     from zerotoken.storage_sqlite import SQLiteStorage
+
     storage = SQLiteStorage(db_path=str(tmp_path / "t.db"))
     from playwright.async_api import async_playwright
+
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
@@ -82,6 +117,7 @@ async def test_relocate_no_stored_returns_none(tmp_path):
 @pytest.mark.asyncio
 async def test_relocate_finds_element_when_stored(tmp_path):
     from zerotoken.storage_sqlite import SQLiteStorage
+
     storage = SQLiteStorage(db_path=str(tmp_path / "t.db"))
     SAMPLE = """
     <!DOCTYPE html><html><body>
@@ -89,6 +125,7 @@ async def test_relocate_finds_element_when_stored(tmp_path):
     </body></html>
     """
     from playwright.async_api import async_playwright
+
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()

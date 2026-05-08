@@ -1,4 +1,5 @@
 """BrowserService 扩展方法测试"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -35,6 +36,7 @@ def mock_context():
 @pytest.fixture
 def browser_service(mock_pipeline, mock_context):
     from zerotoken.services.browser_service import BrowserService
+
     svc = BrowserService.__new__(BrowserService)
     svc._context = mock_context
     svc._stability = MagicMock()

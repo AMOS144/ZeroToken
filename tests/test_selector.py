@@ -5,14 +5,13 @@ SmartSelector 测试
 """
 
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 from zerotoken.selector import (
     SelectorType,
     SelectorCandidate,
     SmartSelector,
-    SmartSelectorGenerator
+    SmartSelectorGenerator,
 )
 
 
@@ -22,10 +21,7 @@ class TestSelectorCandidate:
     def test_create_candidate(self):
         """测试创建候选选择器"""
         candidate = SelectorCandidate(
-            type=SelectorType.ID,
-            value="#my-id",
-            stability_score=0.9,
-            description="id='my-id'"
+            type=SelectorType.ID, value="#my-id", stability_score=0.9, description="id='my-id'"
         )
 
         assert candidate.type == SelectorType.ID
@@ -36,9 +32,7 @@ class TestSelectorCandidate:
     def test_candidate_to_dict(self):
         """测试转换为字典"""
         candidate = SelectorCandidate(
-            type=SelectorType.CSS,
-            value=".btn-primary",
-            stability_score=0.7
+            type=SelectorType.CSS, value=".btn-primary", stability_score=0.7
         )
 
         result = candidate.to_dict()
@@ -47,7 +41,7 @@ class TestSelectorCandidate:
             "type": "css",
             "value": ".btn-primary",
             "stability_score": 0.7,
-            "description": ""
+            "description": "",
         }
 
 
@@ -57,22 +51,16 @@ class TestSmartSelector:
     def test_create_smart_selector(self):
         """测试创建智能选择器"""
         primary = SelectorCandidate(
-            type=SelectorType.TEST_ID,
-            value="[data-testid='submit-btn']",
-            stability_score=0.95
+            type=SelectorType.TEST_ID, value="[data-testid='submit-btn']", stability_score=0.95
         )
         alternatives = [
-            SelectorCandidate(
-                type=SelectorType.CSS,
-                value="button.submit",
-                stability_score=0.7
-            )
+            SelectorCandidate(type=SelectorType.CSS, value="button.submit", stability_score=0.7)
         ]
 
         smart_selector = SmartSelector(
             primary=primary,
             alternatives=alternatives,
-            element_info={"tag": "button", "text": "Submit"}
+            element_info={"tag": "button", "text": "Submit"},
         )
 
         assert smart_selector.primary == primary
@@ -80,16 +68,8 @@ class TestSmartSelector:
 
     def test_best_selector(self):
         """测试获取最佳选择器"""
-        primary = SelectorCandidate(
-            type=SelectorType.ID,
-            value="#submit",
-            stability_score=0.9
-        )
-        smart_selector = SmartSelector(
-            primary=primary,
-            alternatives=[],
-            element_info={}
-        )
+        primary = SelectorCandidate(type=SelectorType.ID, value="#submit", stability_score=0.9)
+        smart_selector = SmartSelector(primary=primary, alternatives=[], element_info={})
 
         best = smart_selector.best_selector()
 
@@ -98,29 +78,13 @@ class TestSmartSelector:
 
     def test_all_selectors_sorted(self):
         """测试获取所有选择器（按稳定性排序）"""
-        primary = SelectorCandidate(
-            type=SelectorType.ID,
-            value="#submit",
-            stability_score=0.9
-        )
+        primary = SelectorCandidate(type=SelectorType.ID, value="#submit", stability_score=0.9)
         alternatives = [
-            SelectorCandidate(
-                type=SelectorType.CSS,
-                value="button.submit",
-                stability_score=0.7
-            ),
-            SelectorCandidate(
-                type=SelectorType.XPATH,
-                value="//button",
-                stability_score=0.5
-            )
+            SelectorCandidate(type=SelectorType.CSS, value="button.submit", stability_score=0.7),
+            SelectorCandidate(type=SelectorType.XPATH, value="//button", stability_score=0.5),
         ]
 
-        smart_selector = SmartSelector(
-            primary=primary,
-            alternatives=alternatives,
-            element_info={}
-        )
+        smart_selector = SmartSelector(primary=primary, alternatives=alternatives, element_info={})
 
         all_selectors = smart_selector.all_selectors()
 
@@ -132,15 +96,9 @@ class TestSmartSelector:
 
     def test_smart_selector_to_dict(self):
         """测试转换为字典"""
-        primary = SelectorCandidate(
-            type=SelectorType.ID,
-            value="#submit",
-            stability_score=0.9
-        )
+        primary = SelectorCandidate(type=SelectorType.ID, value="#submit", stability_score=0.9)
         smart_selector = SmartSelector(
-            primary=primary,
-            alternatives=[],
-            element_info={"tag": "button"}
+            primary=primary, alternatives=[], element_info={"tag": "button"}
         )
 
         result = smart_selector.to_dict()
@@ -273,7 +231,7 @@ class TestSmartSelectorGenerator:
             "tag": "button",
             "className": "btn btn-primary el-123",
             "placeholder": "Enter name",
-            "name": "username"
+            "name": "username",
         }
 
         selectors = await generator._generate_css_selectors(mock_element, info)
@@ -305,17 +263,19 @@ class TestSmartSelectorGenerator:
 
         # 模拟 element
         mock_element = AsyncMock()
-        mock_element.evaluate = AsyncMock(return_value={
-            "tag": "button",
-            "id": "submit-btn",
-            "className": "btn btn-primary",
-            "text": "Submit",
-            "dataTestId": None,
-            "ariaLabel": None,
-            "ariaRole": "button",
-            "name": None,
-            "placeholder": None
-        })
+        mock_element.evaluate = AsyncMock(
+            return_value={
+                "tag": "button",
+                "id": "submit-btn",
+                "className": "btn btn-primary",
+                "text": "Submit",
+                "dataTestId": None,
+                "ariaLabel": None,
+                "ariaRole": "button",
+                "name": None,
+                "placeholder": None,
+            }
+        )
 
         smart_selector = await generator.generate(mock_element)
 

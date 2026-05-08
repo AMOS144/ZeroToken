@@ -1,4 +1,5 @@
 """会话与运行时状态模型"""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -11,6 +12,7 @@ from .operation import PageState, SelectorCandidate
 
 class PauseReason(str, Enum):
     """暂停原因"""
+
     STEP_FAILED = "step_failed"
     PRE_STEP_HINT = "pre_step_hint"
 
@@ -22,6 +24,7 @@ def _default_allowed_resolutions() -> list[str]:
 
 class PauseEvent(BaseModel):
     """暂停事件：包含 AI 仲裁所需的全部上下文"""
+
     reason: PauseReason
     session_id: str
     task_id: str
@@ -39,6 +42,7 @@ class PauseEvent(BaseModel):
 
 class Resolution(BaseModel):
     """AI 仲裁决议"""
+
     type: str
     patch: dict[str, Any] = Field(default_factory=dict)
     vars: dict[str, Any] = Field(default_factory=dict)
@@ -47,6 +51,7 @@ class Resolution(BaseModel):
 
 class RuntimeState(BaseModel):
     """脚本执行运行时状态（持久化到 DB，支持 pause/resume）"""
+
     session_id: str
     task_id: str
     cursor_step_index: int

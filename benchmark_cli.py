@@ -8,13 +8,13 @@
     python benchmark_cli.py analyze --latest              # 分析最新 JSONL
     python benchmark_cli.py analyze-all <dir/>            # 批量分析
 """
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import glob
 import os
-import sys
 
 
 def _find_latest_jsonl(directory: str) -> str | None:
@@ -77,7 +77,7 @@ async def cmd_run_all(args: argparse.Namespace) -> None:
     try:
         tags = [args.tag] if args.tag else None
         batch = await runner.run_batch(scenario_paths, tags=tags)
-        print(f"\n=== Batch Result ===")
+        print("\n=== Batch Result ===")
         print(f"Scenarios: {batch.passed_scenarios}/{batch.total_scenarios} passed")
         print(f"Total duration: {batch.total_duration_ms:.0f}ms")
         for r in batch.results:
@@ -137,7 +137,8 @@ def cmd_analyze_all(args: argparse.Namespace) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Benchmark CLI")
     parser.add_argument(
-        "--output-dir", default="benchmarks",
+        "--output-dir",
+        default="benchmarks",
         help="benchmark JSONL 输出目录（默认 benchmarks/）",
     )
     sub = parser.add_subparsers(dest="command", required=True)
@@ -161,7 +162,9 @@ def main():
 
     args = parser.parse_args()
     if args.command in ("run", "run-all", "replay"):
-        asyncio.run({"run": cmd_run, "run-all": cmd_run_all, "replay": cmd_replay}[args.command](args))
+        asyncio.run(
+            {"run": cmd_run, "run-all": cmd_run_all, "replay": cmd_replay}[args.command](args)
+        )
     elif args.command == "analyze":
         cmd_analyze(args)
     elif args.command == "analyze-all":

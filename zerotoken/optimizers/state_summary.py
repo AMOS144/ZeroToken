@@ -1,4 +1,5 @@
 """页面状态摘要：将页面精简为结构化摘要供 AI 推理"""
+
 from __future__ import annotations
 
 from typing import Any

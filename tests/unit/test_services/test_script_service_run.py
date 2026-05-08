@@ -1,4 +1,5 @@
 """ScriptService run/resume 统计和报废测试"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -6,11 +7,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 @pytest.fixture
 def mock_repos():
     scripts = MagicMock()
-    scripts.script_load = MagicMock(return_value={
-        "task_id": "test_task",
-        "goal": "test",
-        "steps": [{"action": "browser_open", "params": {"url": "https://example.com"}}],
-    })
+    scripts.script_load = MagicMock(
+        return_value={
+            "task_id": "test_task",
+            "goal": "test",
+            "steps": [{"action": "browser_open", "params": {"url": "https://example.com"}}],
+        }
+    )
     scripts.health = MagicMock(return_value=None)
     trajs = MagicMock()
     sessions = MagicMock()
@@ -33,6 +36,7 @@ def mock_browser_svc_for_stats():
 def _make_service(script_repo=None, runtime_repo=None):
     """构造 ScriptService，各 repo 默认 MagicMock"""
     from zerotoken.services.script_service import ScriptService
+
     return ScriptService(
         script_repo or MagicMock(),
         MagicMock(),
@@ -45,8 +49,11 @@ def _make_service(script_repo=None, runtime_repo=None):
 @pytest.fixture
 def mock_browser_svc():
     from zerotoken.models.operation import OperationRecord, OperationResult, PageState, ActionType
+
     record = OperationRecord(
-        step=1, action=ActionType.OPEN, params={},
+        step=1,
+        action=ActionType.OPEN,
+        params={},
         result=OperationResult(success=True, data={}),
         page_state=PageState(url="https://example.com"),
     )
@@ -61,6 +68,7 @@ def mock_browser_svc():
 @pytest.mark.asyncio
 async def test_run_script(mock_repos, mock_browser_svc):
     from zerotoken.services.script_service import ScriptService
+
     scripts, trajs, sessions, runtime, bindings = mock_repos
     svc = ScriptService(scripts, trajs, sessions, runtime, bindings)
     result = await svc.run_script("test_task", mock_browser_svc, vars={})
@@ -70,6 +78,7 @@ async def test_run_script(mock_repos, mock_browser_svc):
 @pytest.mark.asyncio
 async def test_run_script_not_found(mock_repos, mock_browser_svc):
     from zerotoken.services.script_service import ScriptService
+
     scripts, trajs, sessions, runtime, bindings = mock_repos
     scripts.script_load = MagicMock(return_value=None)
     svc = ScriptService(scripts, trajs, sessions, runtime, bindings)
@@ -81,11 +90,14 @@ async def test_run_script_not_found(mock_repos, mock_browser_svc):
 @pytest.mark.asyncio
 async def test_run_script_by_binding(mock_repos, mock_browser_svc):
     from zerotoken.services.script_service import ScriptService
+
     scripts, trajs, sessions, runtime, bindings = mock_repos
-    bindings.binding_get = MagicMock(return_value={
-        "script_task_id": "test_task",
-        "default_vars": {"x": 1},
-    })
+    bindings.binding_get = MagicMock(
+        return_value={
+            "script_task_id": "test_task",
+            "default_vars": {"x": 1},
+        }
+    )
     svc = ScriptService(scripts, trajs, sessions, runtime, bindings)
     result = await svc.run_script_by_binding("job_1", mock_browser_svc)
     assert result["status"] == "completed"
@@ -95,14 +107,17 @@ async def test_run_script_by_binding(mock_repos, mock_browser_svc):
 async def test_resume_script(mock_repos, mock_browser_svc):
     from zerotoken.services.script_service import ScriptService
     from zerotoken.models.session import Resolution
+
     scripts, trajs, sessions, runtime, bindings = mock_repos
-    runtime.runtime_get = MagicMock(return_value={
-        "session_id": "sess-1",
-        "task_id": "test_task",
-        "cursor_step_index": 0,
-        "status": "paused",
-        "vars": {},
-    })
+    runtime.runtime_get = MagicMock(
+        return_value={
+            "session_id": "sess-1",
+            "task_id": "test_task",
+            "cursor_step_index": 0,
+            "status": "paused",
+            "vars": {},
+        }
+    )
     svc = ScriptService(scripts, trajs, sessions, runtime, bindings)
     result = await svc.resume_script("sess-1", Resolution(type="retry"), mock_browser_svc)
     assert result["status"] == "completed"
@@ -113,7 +128,8 @@ async def test_run_script_records_completed_on_success(mock_browser_svc_for_stat
     """run_script 成功时应调 record_run_result(completed)"""
     script_repo = MagicMock()
     script_repo.script_load.return_value = {
-        "task_id": "t1", "goal": "g",
+        "task_id": "t1",
+        "goal": "g",
         "steps": [{"action": "browser_open", "params": {"url": "x"}}],
         "params_schema": {},
     }
@@ -140,10 +156,13 @@ async def test_run_script_rejects_deprecated(mock_browser_svc_for_stats):
     """deprecated 脚本不能执行"""
     script_repo = MagicMock()
     script_repo.health.return_value = {
-        "status": "deprecated", "deprecated_reason": "outdated",
+        "status": "deprecated",
+        "deprecated_reason": "outdated",
     }
     script_repo.script_load.return_value = {
-        "task_id": "t1", "goal": "g", "steps": [],
+        "task_id": "t1",
+        "goal": "g",
+        "steps": [],
     }
 
     svc = _make_service(script_repo=script_repo)
@@ -159,7 +178,9 @@ async def test_run_script_settles_abandoned_sessions(mock_browser_svc_for_stats)
     script_repo = MagicMock()
     script_repo.health.return_value = {"status": "active"}
     script_repo.script_load.return_value = {
-        "task_id": "t1", "goal": "g", "steps": [],
+        "task_id": "t1",
+        "goal": "g",
+        "steps": [],
     }
     script_repo.record_run_result.return_value = {"status": "active"}
 
@@ -187,10 +208,13 @@ async def test_run_script_adds_auto_warned_hint(mock_browser_svc_for_stats):
     script_repo = MagicMock()
     script_repo.health.return_value = {"status": "active"}
     script_repo.script_load.return_value = {
-        "task_id": "t1", "goal": "g", "steps": [],
+        "task_id": "t1",
+        "goal": "g",
+        "steps": [],
     }
     script_repo.record_run_result.return_value = {
-        "status": "warning", "consecutive_failures": 5,
+        "status": "warning",
+        "consecutive_failures": 5,
     }
     runtime_repo = MagicMock()
     runtime_repo.find_paused_before.return_value = []
@@ -213,7 +237,9 @@ async def test_run_script_paused_does_not_update_stats(mock_browser_svc_for_stat
     script_repo = MagicMock()
     script_repo.health.return_value = {"status": "active"}
     script_repo.script_load.return_value = {
-        "task_id": "t1", "goal": "g", "steps": [],
+        "task_id": "t1",
+        "goal": "g",
+        "steps": [],
     }
     runtime_repo = MagicMock()
     runtime_repo.find_paused_before.return_value = []
@@ -222,9 +248,13 @@ async def test_run_script_paused_does_not_update_stats(mock_browser_svc_for_stat
 
     with patch(
         "zerotoken.engine.script_engine_v2.ScriptEngineV2.run",
-        new=AsyncMock(return_value={
-            "status": "paused", "session_id": "s1", "pause_event": {},
-        }),
+        new=AsyncMock(
+            return_value={
+                "status": "paused",
+                "session_id": "s1",
+                "pause_event": {},
+            }
+        ),
     ):
         result = await svc.run_script("t1", mock_browser_svc_for_stats)
 
@@ -238,7 +268,9 @@ async def test_resume_script_records_stats_on_terminal(mock_browser_svc_for_stat
     """resume 终态时应更新统计"""
     script_repo = MagicMock()
     script_repo.script_load.return_value = {
-        "task_id": "t1", "goal": "g", "steps": [],
+        "task_id": "t1",
+        "goal": "g",
+        "steps": [],
     }
     script_repo.record_run_result.return_value = {"status": "active"}
 
@@ -248,12 +280,15 @@ async def test_resume_script_records_stats_on_terminal(mock_browser_svc_for_stat
     svc = _make_service(script_repo=script_repo, runtime_repo=runtime_repo)
 
     from zerotoken.models.session import Resolution
+
     with patch(
         "zerotoken.engine.script_engine_v2.ScriptEngineV2.resume",
         new=AsyncMock(return_value={"status": "completed", "session_id": "s1"}),
     ):
-        result = await svc.resume_script(
-            "s1", Resolution(type="retry"), mock_browser_svc_for_stats,
+        await svc.resume_script(
+            "s1",
+            Resolution(type="retry"),
+            mock_browser_svc_for_stats,
         )
 
     script_repo.record_run_result.assert_called_once_with("t1", "completed", "s1")

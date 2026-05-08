@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "zerotoken": {
+      "command": "/Users/amos/project/ZeroToken/.venv/bin/zerotoken-mcp",
+      "cwd": "/Users/amos/project/ZeroToken"
+    }
+  }
+}

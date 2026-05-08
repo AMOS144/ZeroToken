@@ -1,7 +1,7 @@
 """BenchmarkRunner 单元测试（mock dispatch，不需要真实浏览器）"""
+
 import json
 import os
-import tempfile
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
@@ -40,6 +40,7 @@ def _mock_dispatch_result(success=True):
 class TestScenarioLoading:
     def test_load_valid_yaml(self, tmp_path):
         from zerotoken.benchmark.runner import BenchmarkRunner
+
         path = _make_scenario_yaml(tmp_path)
         runner = BenchmarkRunner.__new__(BenchmarkRunner)
         scenario = runner._load_scenario(path)
@@ -48,6 +49,7 @@ class TestScenarioLoading:
 
     def test_load_nonexistent_yaml(self, tmp_path):
         from zerotoken.benchmark.runner import BenchmarkRunner
+
         runner = BenchmarkRunner.__new__(BenchmarkRunner)
         with pytest.raises(FileNotFoundError):
             runner._load_scenario(str(tmp_path / "nonexistent.yaml"))
@@ -57,11 +59,14 @@ class TestRunScenario:
     @pytest.mark.asyncio
     async def test_all_steps_succeed(self, tmp_path):
         from zerotoken.benchmark.runner import BenchmarkRunner
+
         output_dir = str(tmp_path / "benchmarks")
         path = _make_scenario_yaml(tmp_path)
         mock_dispatch = AsyncMock(return_value=_mock_dispatch_result(True))
-        with patch("zerotoken.benchmark.runner.dispatch", mock_dispatch), \
-             patch("zerotoken.benchmark.runner.init_services"):
+        with (
+            patch("zerotoken.benchmark.runner.dispatch", mock_dispatch),
+            patch("zerotoken.benchmark.runner.init_services"),
+        ):
             runner = BenchmarkRunner(output_dir=output_dir)
             result = await runner.run_scenario(path)
         assert result.scenario_name == "test_scenario"
@@ -74,6 +79,7 @@ class TestRunScenario:
     @pytest.mark.asyncio
     async def test_step_failure_continues(self, tmp_path):
         from zerotoken.benchmark.runner import BenchmarkRunner
+
         output_dir = str(tmp_path / "benchmarks")
         steps = [
             {"action": "browser_init", "params": {}},
@@ -82,14 +88,18 @@ class TestRunScenario:
         ]
         path = _make_scenario_yaml(tmp_path, steps=steps)
         call_count = 0
+
         async def mock_dispatch_fn(name, args):
             nonlocal call_count
             call_count += 1
             if name == "browser_click":
                 raise RuntimeError("element not found")
             return _mock_dispatch_result(True)
-        with patch("zerotoken.benchmark.runner.dispatch", side_effect=mock_dispatch_fn), \
-             patch("zerotoken.benchmark.runner.init_services"):
+
+        with (
+            patch("zerotoken.benchmark.runner.dispatch", side_effect=mock_dispatch_fn),
+            patch("zerotoken.benchmark.runner.init_services"),
+        ):
             runner = BenchmarkRunner(output_dir=output_dir)
             result = await runner.run_scenario(path)
         assert result.total_steps == 3
@@ -101,15 +111,18 @@ class TestRunScenario:
     @pytest.mark.asyncio
     async def test_jsonl_records_written(self, tmp_path):
         from zerotoken.benchmark.runner import BenchmarkRunner
+
         output_dir = str(tmp_path / "benchmarks")
         path = _make_scenario_yaml(tmp_path)
         mock_dispatch = AsyncMock(return_value=_mock_dispatch_result(True))
-        with patch("zerotoken.benchmark.runner.dispatch", mock_dispatch), \
-             patch("zerotoken.benchmark.runner.init_services"):
+        with (
+            patch("zerotoken.benchmark.runner.dispatch", mock_dispatch),
+            patch("zerotoken.benchmark.runner.init_services"),
+        ):
             runner = BenchmarkRunner(output_dir=output_dir)
             result = await runner.run_scenario(path)
         with open(result.jsonl_path) as f:
-            lines = [json.loads(l) for l in f if l.strip()]
+            lines = [json.loads(line) for line in f if line.strip()]
         assert len(lines) == 3
         assert lines[0]["tool_name"] == "browser_init"
         assert lines[2]["tool_name"] == "browser_close"

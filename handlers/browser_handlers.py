@@ -1,4 +1,5 @@
 """浏览器 MCP 工具定义 & 分发"""
+
 from __future__ import annotations
 
 import json
@@ -50,6 +51,7 @@ def _obj_schema(
 
 # ------------ 工具列表 ---------------
 
+
 def browser_tools() -> list[Tool]:
     """返回所有浏览器相关 MCP 工具定义"""
     return [
@@ -57,12 +59,30 @@ def browser_tools() -> list[Tool]:
         Tool(
             name="browser_init",
             description="Initialize the browser (call once before other browser tools). stealth=true enables anti-detection.",
-            inputSchema=_obj_schema({
-                "headless": {"type": "boolean", "description": "Run in headless mode", "default": True},
-                "viewport_width": {"type": "integer", "description": "Viewport width", "default": 1920},
-                "viewport_height": {"type": "integer", "description": "Viewport height", "default": 1080},
-                "stealth": {"type": "boolean", "description": "Enable stealth mode", "default": False},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "headless": {
+                        "type": "boolean",
+                        "description": "Run in headless mode",
+                        "default": True,
+                    },
+                    "viewport_width": {
+                        "type": "integer",
+                        "description": "Viewport width",
+                        "default": 1920,
+                    },
+                    "viewport_height": {
+                        "type": "integer",
+                        "description": "Viewport height",
+                        "default": 1080,
+                    },
+                    "stealth": {
+                        "type": "boolean",
+                        "description": "Enable stealth mode",
+                        "default": False,
+                    },
+                }
+            ),
         ),
         Tool(
             name="browser_close",
@@ -73,190 +93,322 @@ def browser_tools() -> list[Tool]:
         Tool(
             name="browser_open",
             description="Open a URL in the browser and return operation record",
-            inputSchema=_obj_schema({
-                "url": {"type": "string", "description": "The URL to open"},
-                "wait_until": {"type": "string", "description": "Wait condition", "default": "networkidle"},
-                **_SCREENSHOT_PROP,
-            }, required=["url"]),
+            inputSchema=_obj_schema(
+                {
+                    "url": {"type": "string", "description": "The URL to open"},
+                    "wait_until": {
+                        "type": "string",
+                        "description": "Wait condition",
+                        "default": "networkidle",
+                    },
+                    **_SCREENSHOT_PROP,
+                },
+                required=["url"],
+            ),
         ),
         # -- 鼠标交互 --
         Tool(
             name="browser_click",
             description="Click an element and return operation record with page state",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector of the element"},
-                "timeout": {"type": "integer", "description": "Timeout in ms", "default": 30000},
-                "wait_after": {"type": "number", "description": "Seconds to wait after click", "default": 0.5},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector of the element"},
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Timeout in ms",
+                        "default": 30000,
+                    },
+                    "wait_after": {
+                        "type": "number",
+                        "description": "Seconds to wait after click",
+                        "default": 0.5,
+                    },
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                },
+                required=["selector"],
+            ),
         ),
         Tool(
             name="browser_hover",
             description="Hover over an element",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector"},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector"},
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                },
+                required=["selector"],
+            ),
         ),
         Tool(
             name="browser_right_click",
             description="Right-click an element to open context menu",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector"},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector"},
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                },
+                required=["selector"],
+            ),
         ),
         Tool(
             name="browser_double_click",
             description="Double-click an element",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector"},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector"},
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                },
+                required=["selector"],
+            ),
         ),
         Tool(
             name="browser_drag_drop",
             description="Drag an element to a target position",
-            inputSchema=_obj_schema({
-                "source": {"type": "string", "description": "CSS selector of source element"},
-                "target": {"type": "string", "description": "CSS selector of target element"},
-                **_SCREENSHOT_PROP,
-            }, required=["source", "target"]),
+            inputSchema=_obj_schema(
+                {
+                    "source": {"type": "string", "description": "CSS selector of source element"},
+                    "target": {"type": "string", "description": "CSS selector of target element"},
+                    **_SCREENSHOT_PROP,
+                },
+                required=["source", "target"],
+            ),
         ),
         # -- 键盘 & 输入 --
         Tool(
             name="browser_input",
             description="Type text into an input field (clear + type)",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector of the input field"},
-                "text": {"type": "string", "description": "Text to type"},
-                "delay": {"type": "integer", "description": "Delay between keystrokes (ms)", "default": 50},
-                "clear_first": {"type": "boolean", "description": "Clear existing value before typing", "default": True},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }, required=["selector", "text"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector of the input field",
+                    },
+                    "text": {"type": "string", "description": "Text to type"},
+                    "delay": {
+                        "type": "integer",
+                        "description": "Delay between keystrokes (ms)",
+                        "default": 50,
+                    },
+                    "clear_first": {
+                        "type": "boolean",
+                        "description": "Clear existing value before typing",
+                        "default": True,
+                    },
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                },
+                required=["selector", "text"],
+            ),
         ),
         Tool(
             name="browser_keyboard",
             description="Press a keyboard key (Enter, Escape, Tab, etc.)",
-            inputSchema=_obj_schema({
-                "key": {"type": "string", "description": "Key name (Enter, Escape, Tab, ArrowDown, ...)"},
-                **_SCREENSHOT_PROP,
-            }, required=["key"]),
+            inputSchema=_obj_schema(
+                {
+                    "key": {
+                        "type": "string",
+                        "description": "Key name (Enter, Escape, Tab, ArrowDown, ...)",
+                    },
+                    **_SCREENSHOT_PROP,
+                },
+                required=["key"],
+            ),
         ),
         Tool(
             name="browser_type_text",
             description="Type text at current focus without clearing (raw keystrokes)",
-            inputSchema=_obj_schema({
-                "text": {"type": "string", "description": "Text to type"},
-                "delay": {"type": "integer", "description": "Delay between keystrokes (ms)", "default": 50},
-                **_SCREENSHOT_PROP,
-            }, required=["text"]),
+            inputSchema=_obj_schema(
+                {
+                    "text": {"type": "string", "description": "Text to type"},
+                    "delay": {
+                        "type": "integer",
+                        "description": "Delay between keystrokes (ms)",
+                        "default": 50,
+                    },
+                    **_SCREENSHOT_PROP,
+                },
+                required=["text"],
+            ),
         ),
         # -- 提取 --
         Tool(
             name="browser_get_text",
             description="Extract text or attribute from an element",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector"},
-                "attr": {"type": "string", "description": "Attribute to extract (text, html, value, innerText)", "default": "text"},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector"},
+                    "attr": {
+                        "type": "string",
+                        "description": "Attribute to extract (text, html, value, innerText)",
+                        "default": "text",
+                    },
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                },
+                required=["selector"],
+            ),
         ),
         Tool(
             name="browser_get_html",
             description="Get HTML content of page or element",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector (omit for full page)"},
-                **_ADAPTIVE_PROPS,
-                **_SCREENSHOT_PROP,
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector (omit for full page)",
+                    },
+                    **_ADAPTIVE_PROPS,
+                    **_SCREENSHOT_PROP,
+                }
+            ),
         ),
         Tool(
             name="browser_screenshot",
             description="Take a screenshot and return image data",
-            inputSchema=_obj_schema({
-                "path": {"type": "string", "description": "File path to save screenshot (optional)"},
-                "full_page": {"type": "boolean", "description": "Capture full page", "default": False},
-                "selector": {"type": "string", "description": "CSS selector to capture specific element"},
-                "timeout": {"type": "integer", "description": "Screenshot timeout in ms (default 10000)", "default": 10000},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "path": {
+                        "type": "string",
+                        "description": "File path to save screenshot (optional)",
+                    },
+                    "full_page": {
+                        "type": "boolean",
+                        "description": "Capture full page",
+                        "default": False,
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector to capture specific element",
+                    },
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Screenshot timeout in ms (default 10000)",
+                        "default": 10000,
+                    },
+                }
+            ),
         ),
         Tool(
             name="browser_extract_data",
             description="Extract structured data based on schema (AI-node capable)",
-            inputSchema=_obj_schema({
-                "schema": {"type": "object", "description": "Data extraction schema"},
-                **_SCREENSHOT_PROP,
-            }, required=["schema"]),
+            inputSchema=_obj_schema(
+                {
+                    "schema": {"type": "object", "description": "Data extraction schema"},
+                    **_SCREENSHOT_PROP,
+                },
+                required=["schema"],
+            ),
         ),
         # -- 等待 --
         Tool(
             name="browser_wait_for",
             description="Wait for a condition (selector, url, text, navigation)",
-            inputSchema=_obj_schema({
-                "condition": {"type": "string", "description": "Type of condition"},
-                "value": {"type": "string", "description": "Condition value"},
-                "timeout": {"type": "integer", "description": "Timeout in ms", "default": 30000},
-                "state": {"type": "string", "description": "Wait state: visible / attached / hidden / detached (default: visible)"},
-                **_SCREENSHOT_PROP,
-            }, required=["condition"]),
+            inputSchema=_obj_schema(
+                {
+                    "condition": {"type": "string", "description": "Type of condition"},
+                    "value": {"type": "string", "description": "Condition value"},
+                    "timeout": {
+                        "type": "integer",
+                        "description": "Timeout in ms",
+                        "default": 30000,
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "Wait state: visible / attached / hidden / detached (default: visible)",
+                    },
+                    **_SCREENSHOT_PROP,
+                },
+                required=["condition"],
+            ),
         ),
         # -- 滚动 --
         Tool(
             name="browser_scroll",
             description="Scroll page or element",
-            inputSchema=_obj_schema({
-                "direction": {"type": "string", "description": "up / down / left / right", "default": "down"},
-                "amount": {"type": "integer", "description": "Pixels to scroll", "default": 300},
-                "selector": {"type": "string", "description": "CSS selector of scrollable element (omit for page)"},
-                **_SCREENSHOT_PROP,
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "direction": {
+                        "type": "string",
+                        "description": "up / down / left / right",
+                        "default": "down",
+                    },
+                    "amount": {
+                        "type": "integer",
+                        "description": "Pixels to scroll",
+                        "default": 300,
+                    },
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector of scrollable element (omit for page)",
+                    },
+                    **_SCREENSHOT_PROP,
+                }
+            ),
         ),
         # -- Tab 管理 --
         Tool(
             name="browser_new_tab",
             description="Open a new tab with optional URL, returns tab_id",
-            inputSchema=_obj_schema({
-                "url": {"type": "string", "description": "URL to open in new tab (blank if omitted)"},
-                **_SCREENSHOT_PROP,
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "url": {
+                        "type": "string",
+                        "description": "URL to open in new tab (blank if omitted)",
+                    },
+                    **_SCREENSHOT_PROP,
+                }
+            ),
         ),
         Tool(
             name="browser_switch_tab",
             description="Switch to a tab by tab_id (use browser_list_tabs to see IDs)",
-            inputSchema=_obj_schema({
-                "tab_id": {"type": "integer", "description": "Tab ID to switch to (from list_tabs)"},
-                **_SCREENSHOT_PROP,
-            }, required=["tab_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "tab_id": {
+                        "type": "integer",
+                        "description": "Tab ID to switch to (from list_tabs)",
+                    },
+                    **_SCREENSHOT_PROP,
+                },
+                required=["tab_id"],
+            ),
         ),
         Tool(
             name="browser_close_tab",
             description="Close a tab by tab_id (defaults to current tab)",
-            inputSchema=_obj_schema({
-                "tab_id": {"type": "integer", "description": "Tab ID to close (from list_tabs)"},
-                **_SCREENSHOT_PROP,
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "tab_id": {
+                        "type": "integer",
+                        "description": "Tab ID to close (from list_tabs)",
+                    },
+                    **_SCREENSHOT_PROP,
+                }
+            ),
         ),
         Tool(
             name="browser_list_tabs",
             description="List all open tabs with tab_id, url and title",
-            inputSchema=_obj_schema({
-                **_SCREENSHOT_PROP,
-            }),
+            inputSchema=_obj_schema(
+                {
+                    **_SCREENSHOT_PROP,
+                }
+            ),
         ),
         # -- iframe --
         Tool(
             name="browser_enter_iframe",
             description="Enter an iframe context by selector",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector of the iframe"},
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector of the iframe"},
+                },
+                required=["selector"],
+            ),
         ),
         Tool(
             name="browser_exit_iframe",
@@ -267,32 +419,51 @@ def browser_tools() -> list[Tool]:
         Tool(
             name="browser_upload",
             description="Upload a file via file input element",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector of file input"},
-                "path": {"type": "string", "description": "Local file path to upload"},
-            }, required=["selector", "path"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {"type": "string", "description": "CSS selector of file input"},
+                    "path": {"type": "string", "description": "Local file path to upload"},
+                },
+                required=["selector", "path"],
+            ),
         ),
         Tool(
             name="browser_download",
             description="Trigger download and return file path",
-            inputSchema=_obj_schema({
-                "selector": {"type": "string", "description": "CSS selector that triggers download"},
-                "save_dir": {"type": "string", "description": "Directory to save file (default: tmp)"},
-            }, required=["selector"]),
+            inputSchema=_obj_schema(
+                {
+                    "selector": {
+                        "type": "string",
+                        "description": "CSS selector that triggers download",
+                    },
+                    "save_dir": {
+                        "type": "string",
+                        "description": "Directory to save file (default: tmp)",
+                    },
+                },
+                required=["selector"],
+            ),
         ),
         # -- JS 执行 --
         Tool(
             name="browser_evaluate",
             description="Evaluate JavaScript expression in page context",
-            inputSchema=_obj_schema({
-                "expression": {"type": "string", "description": "JavaScript expression to evaluate"},
-                **_SCREENSHOT_PROP,
-            }, required=["expression"]),
+            inputSchema=_obj_schema(
+                {
+                    "expression": {
+                        "type": "string",
+                        "description": "JavaScript expression to evaluate",
+                    },
+                    **_SCREENSHOT_PROP,
+                },
+                required=["expression"],
+            ),
         ),
     ]
 
 
 # --------------- 公共辅助 ---------------
+
 
 def _error_resp(
     error: str,
@@ -323,15 +494,30 @@ def _format_record(record: Any, include_screenshot: bool = True) -> dict[str, An
 
 # 返回 OperationRecord 的操作（需同步录入轨迹）
 _RECORD_ACTIONS = {
-    "browser_open", "browser_click", "browser_input",
-    "browser_get_text", "browser_get_html", "browser_screenshot",
-    "browser_wait_for", "browser_extract_data",
-    "browser_hover", "browser_right_click", "browser_double_click",
-    "browser_keyboard", "browser_type_text", "browser_drag_drop",
-    "browser_scroll", "browser_new_tab", "browser_switch_tab",
-    "browser_close_tab", "browser_list_tabs",
-    "browser_enter_iframe", "browser_exit_iframe",
-    "browser_upload", "browser_download", "browser_evaluate",
+    "browser_open",
+    "browser_click",
+    "browser_input",
+    "browser_get_text",
+    "browser_get_html",
+    "browser_screenshot",
+    "browser_wait_for",
+    "browser_extract_data",
+    "browser_hover",
+    "browser_right_click",
+    "browser_double_click",
+    "browser_keyboard",
+    "browser_type_text",
+    "browser_drag_drop",
+    "browser_scroll",
+    "browser_new_tab",
+    "browser_switch_tab",
+    "browser_close_tab",
+    "browser_list_tabs",
+    "browser_enter_iframe",
+    "browser_exit_iframe",
+    "browser_upload",
+    "browser_download",
+    "browser_evaluate",
 }
 
 
@@ -380,7 +566,9 @@ async def handle_browser_tool(
 
 
 async def _dispatch_action(
-    name: str, args: dict[str, Any], svc: Any,
+    name: str,
+    args: dict[str, Any],
+    svc: Any,
 ) -> Any:
     """按工具名调用 BrowserService 对应方法，返回 OperationRecord 或 None"""
     adaptive_kw = {
@@ -413,7 +601,8 @@ async def _dispatch_action(
             args["selector"],
             timeout=args.get("timeout"),
             wait_after=args.get("wait_after", 0.5),
-            **adaptive_kw, **take_ss,
+            **adaptive_kw,
+            **take_ss,
         )
     if name == "browser_hover":
         return await svc.hover(args["selector"], **adaptive_kw, **take_ss)
@@ -434,10 +623,12 @@ async def _dispatch_action(
     # -- 键盘输入 --
     if name == "browser_input":
         return await svc.input(
-            args["selector"], args["text"],
+            args["selector"],
+            args["text"],
             delay=args.get("delay", 50),
             clear_first=args.get("clear_first", True),
-            **adaptive_kw, **take_ss,
+            **adaptive_kw,
+            **take_ss,
         )
     if name == "browser_keyboard":
         return await svc.keyboard(args["key"], **take_ss)
@@ -453,12 +644,14 @@ async def _dispatch_action(
         return await svc.get_text(
             args["selector"],
             attr=args.get("attr", "text"),
-            **adaptive_kw, **take_ss,
+            **adaptive_kw,
+            **take_ss,
         )
     if name == "browser_get_html":
         return await svc.get_html(
             selector=args.get("selector"),
-            **adaptive_kw, **take_ss,
+            **adaptive_kw,
+            **take_ss,
         )
     if name == "browser_screenshot":
         return await svc.screenshot(
@@ -491,8 +684,10 @@ async def _dispatch_action(
     # -- 文件操作 --
     if name == "browser_upload":
         return await svc.upload(
-            args["selector"], args["path"],
-            **adaptive_kw, **take_ss,
+            args["selector"],
+            args["path"],
+            **adaptive_kw,
+            **take_ss,
         )
     if name == "browser_download":
         return await svc.download(

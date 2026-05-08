@@ -1,5 +1,5 @@
 """Tests for ScriptEngine run_script with mock controller and SessionStore."""
-import asyncio
+
 import os
 import tempfile
 from typing import Any, Dict, Optional
@@ -62,8 +62,16 @@ class MockController:
             page_state=PageState(url=self._page_url, title=""),
         )
 
-    async def screenshot(self, path: Optional[str] = None, full_page: bool = False, selector: Optional[str] = None, **kwargs) -> OperationRecord:
-        self.calls.append(("screenshot", {"path": path, "full_page": full_page, "selector": selector}))
+    async def screenshot(
+        self,
+        path: Optional[str] = None,
+        full_page: bool = False,
+        selector: Optional[str] = None,
+        **kwargs,
+    ) -> OperationRecord:
+        self.calls.append(
+            ("screenshot", {"path": path, "full_page": full_page, "selector": selector})
+        )
         return OperationRecord(
             step=5,
             action="screenshot",
@@ -72,7 +80,9 @@ class MockController:
             page_state=PageState(url=self._page_url, title=""),
         )
 
-    async def wait_for(self, condition: str, value: Optional[str] = None, timeout: Optional[int] = None, **kwargs) -> OperationRecord:
+    async def wait_for(
+        self, condition: str, value: Optional[str] = None, timeout: Optional[int] = None, **kwargs
+    ) -> OperationRecord:
         self.calls.append(("wait_for", {"condition": condition, "value": value}))
         return OperationRecord(
             step=6,
@@ -148,7 +158,12 @@ async def test_run_script_executes_get_text_screenshot_wait_for_extract_data(ses
             {"action": "browser_get_text", "params": {"selector": "h1"}},
             {"action": "browser_screenshot", "params": {"full_page": True}},
             {"action": "browser_wait_for", "params": {"condition": "navigation"}},
-            {"action": "browser_extract_data", "params": {"schema": {"fields": [{"name": "title", "selector": "h1", "type": "text"}]}}},
+            {
+                "action": "browser_extract_data",
+                "params": {
+                    "schema": {"fields": [{"name": "title", "selector": "h1", "type": "text"}]}
+                },
+            },
         ],
     }
     controller = MockController()

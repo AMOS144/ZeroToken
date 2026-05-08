@@ -1,4 +1,5 @@
 """BrowserContextManager 单元测试（Mock Playwright）"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -39,6 +40,7 @@ async def test_start_creates_page(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         assert mgr.active_page is not None
@@ -52,6 +54,7 @@ async def test_new_tab(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         tab = await mgr.new_tab()
@@ -66,11 +69,12 @@ async def test_switch_tab(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         await mgr.new_tab()
         assert mgr.active_page.tab_id == 0
-        switched = await mgr.switch_tab(1)
+        await mgr.switch_tab(1)
         assert mgr.active_page.tab_id == 1
 
 
@@ -81,6 +85,7 @@ async def test_switch_tab_invalid(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         with pytest.raises(ValueError, match=r"Tab 99 not found.*Available tabs.*\[0\]"):
@@ -94,6 +99,7 @@ async def test_close_tab_invalid_shows_available(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         with pytest.raises(ValueError, match=r"Tab 99 not found.*Available tabs.*\[0\]"):
@@ -109,6 +115,7 @@ async def test_enter_exit_iframe(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         mp = mgr.active_page
@@ -126,6 +133,7 @@ async def test_stop(mock_playwright):
     with patch("zerotoken.browser.context.async_playwright") as mock_ap:
         mock_ap.return_value.start = AsyncMock(return_value=mock_pw)
         from zerotoken.browser.context import BrowserContextManager
+
         mgr = BrowserContextManager()
         await mgr.start(headless=True, viewport={"width": 1920, "height": 1080}, stealth=False)
         await mgr.stop()

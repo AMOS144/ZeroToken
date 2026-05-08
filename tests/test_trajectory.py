@@ -3,9 +3,6 @@ Test TrajectoryRecorder - Test trajectory recording capabilities.
 """
 
 import pytest
-import json
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 from zerotoken.trajectory import Trajectory, TrajectoryRecorder
 from zerotoken.controller import OperationRecord, PageState, BrowserController
 from zerotoken.storage_sqlite import SQLiteStorage
@@ -32,7 +29,7 @@ class TestTrajectory:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
 
         traj.add_operation(record)
@@ -52,7 +49,7 @@ class TestTrajectory:
             params={"selector": "#button"},
             result={"success": False},
             page_state=page_state,
-            error="Element not found"
+            error="Element not found",
         )
 
         traj.add_operation(record)
@@ -79,7 +76,11 @@ class TestTrajectory:
             params={"schema": {"fields": []}},
             result={"success": True, "value": {}},
             page_state=page_state,
-            fuzzy_point={"requires_judgment": True, "reason": "需根据 schema 提取可变内容", "hint": "AI 视觉"}
+            fuzzy_point={
+                "requires_judgment": True,
+                "reason": "需根据 schema 提取可变内容",
+                "hint": "AI 视觉",
+            },
         )
         traj.add_operation(record)
         s = traj.to_ai_prompt_format()
@@ -96,7 +97,7 @@ class TestTrajectory:
             action="click",
             params={"selector": "#btn"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         traj.add_operation(record)
         s = traj.to_ai_prompt_format()
@@ -114,7 +115,7 @@ class TestTrajectory:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         traj.add_operation(record)
         traj.complete()
@@ -210,7 +211,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         controller._operation_history.append(record)
 
@@ -230,7 +231,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
 
         recorder.record_operation(record)
@@ -261,7 +262,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
 
@@ -283,7 +284,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         controller._operation_history.append(record)
 
@@ -302,7 +303,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
 
@@ -325,7 +326,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
         recorder.save_trajectory(traj)
@@ -349,7 +350,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
         recorder.save_trajectory()
@@ -369,7 +370,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
         recorder.save_trajectory()
@@ -392,7 +393,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
         recorder.save_trajectory()
@@ -413,7 +414,7 @@ class TestTrajectoryRecorder:
             action="open",
             params={"url": "https://example.com"},
             result={"success": True},
-            page_state=page_state
+            page_state=page_state,
         )
         recorder.record_operation(record)
         recorder.save_trajectory()
@@ -431,7 +432,7 @@ class TestTrajectoryRecorder:
             "result": {"success": True},
             "page_state": {"url": "https://example.com", "title": "Example"},
             "screenshot": None,
-            "error": None
+            "error": None,
         }
 
         record = recorder._dict_to_record(data)

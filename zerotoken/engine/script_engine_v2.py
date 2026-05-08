@@ -5,6 +5,7 @@
 2. 任何步骤失败 -> 构建 PauseEvent -> 持久化 RuntimeState -> 返回暂停状态
 3. resume(session_id, script, resolution) -> 根据 AI 仲裁决议恢复执行
 """
+
 from __future__ import annotations
 
 import uuid
@@ -13,21 +14,30 @@ from typing import Any
 from zerotoken.models.script import Script, ScriptStep
 from zerotoken.models.session import PauseEvent, PauseReason, Resolution
 from zerotoken.models.operation import (
-    ActionType, OperationRecord, OperationResult, PageState,
+    ActionType,
+    OperationRecord,
+    OperationResult,
+    PageState,
 )
 from .data_flow import VarsEnvironment
 from .flow_control import FlowExecutor
 
 
 def _make_placeholder_record(
-    params: dict[str, Any], *, success: bool = True, error: str | None = None,
+    params: dict[str, Any],
+    *,
+    success: bool = True,
+    error: str | None = None,
 ) -> OperationRecord:
     """构造 setup/skip 类步骤或错误的占位 OperationRecord"""
     return OperationRecord(
-        step=0, action=ActionType.EVALUATE, params=params,
+        step=0,
+        action=ActionType.EVALUATE,
+        params=params,
         result=OperationResult(success=success, error=error),
         page_state=PageState(),
     )
+
 
 # BrowserService 动作方法映射（action 名 -> 方法名）
 _ACTION_METHOD_MAP = {
@@ -59,18 +69,29 @@ _ACTION_METHOD_MAP = {
 
 # 轨迹控制步骤，引擎自动跳过（这些不是浏览器操作）
 _SKIP_ACTIONS = {
-    "trajectory_start", "trajectory_complete", "trajectory_get",
+    "trajectory_start",
+    "trajectory_complete",
+    "trajectory_get",
 }
 
 # 生命周期步骤，引擎直接调 BrowserService.init() / .close()
 _LIFECYCLE_ACTIONS = {
-    "browser_init", "browser_close",
+    "browser_init",
+    "browser_close",
 }
 
 # 第一个位置参数为 selector 的动作
 _SELECTOR_ACTIONS = {
-    "click", "input", "hover", "right_click", "double_click",
-    "get_text", "get_html", "upload", "download", "drag_drop",
+    "click",
+    "input",
+    "hover",
+    "right_click",
+    "double_click",
+    "get_text",
+    "get_html",
+    "upload",
+    "download",
+    "drag_drop",
 }
 
 
@@ -99,8 +120,10 @@ class ScriptEngineV2:
 
         self._sessions.session_start(session_id, task_id=script.task_id)
         self._runtime.runtime_init(
-            session_id, task_id=script.task_id,
-            cursor_step_index=0, status="running",
+            session_id,
+            task_id=script.task_id,
+            cursor_step_index=0,
+            status="running",
             vars=env.snapshot(),
         )
 
@@ -131,19 +154,23 @@ class ScriptEngineV2:
         if resolution.type == "skip":
             cursor += 1
             if cursor >= len(script.steps):
-                self._runtime.runtime_update(session_id, status="completed", cursor_step_index=cursor)
+                self._runtime.runtime_update(
+                    session_id, status="completed", cursor_step_index=cursor
+                )
                 return {"status": "completed", "session_id": session_id}
 
         if resolution.type == "patch_step" and resolution.patch:
             step = script.steps[cursor]
             patched = self._apply_patch(step, resolution.patch)
             script = script.model_copy(
-                update={"steps": script.steps[:cursor] + [patched] + script.steps[cursor + 1:]}
+                update={"steps": script.steps[:cursor] + [patched] + script.steps[cursor + 1 :]}
             )
 
         self._runtime.runtime_update(
-            session_id, status="running",
-            cursor_step_index=cursor, vars=env.snapshot(),
+            session_id,
+            status="running",
+            cursor_step_index=cursor,
+            vars=env.snapshot(),
         )
         return await self._execute(session_id, script, env, start_index=cursor)
 
@@ -167,11 +194,16 @@ class ScriptEngineV2:
             batch_off = result.failed_batch_offset or 0
             abs_step_index = start_index + batch_off
             pause_event = self._build_pause_event(
-                session_id, script.task_id, abs_step_index,
-                result.failed_step, result.failed_record, result.error,
+                session_id,
+                script.task_id,
+                abs_step_index,
+                result.failed_step,
+                result.failed_record,
+                result.error,
             )
             self._runtime.runtime_update(
-                session_id, status="paused",
+                session_id,
+                status="paused",
                 cursor_step_index=abs_step_index,
                 pause_event=pause_event.model_dump(),
                 vars=env.snapshot(),
@@ -187,7 +219,8 @@ class ScriptEngineV2:
             return {"status": "failed", "session_id": session_id, "error": result.error}
 
         self._runtime.runtime_update(
-            session_id, status="completed",
+            session_id,
+            status="completed",
             cursor_step_index=len(script.steps),
             vars=env.snapshot(),
         )
@@ -217,13 +250,16 @@ class ScriptEngineV2:
         method_name = _ACTION_METHOD_MAP.get(step.action)
         if method_name is None:
             return _make_placeholder_record(
-                step.params, success=False, error=f"Unknown action: {step.action}",
+                step.params,
+                success=False,
+                error=f"Unknown action: {step.action}",
             )
 
         method = getattr(self._browser, method_name, None)
         if method is None:
             return _make_placeholder_record(
-                step.params, success=False,
+                step.params,
+                success=False,
                 error=f"BrowserService missing method: {method_name}",
             )
 
@@ -271,7 +307,9 @@ class ScriptEngineV2:
                 tab_id = params.pop("tab_id")
                 return await method(tab_id, **params)
             elif method_name == "new_tab":
-                return await method(url=params.get("url"), **{k: v for k, v in params.items() if k != "url"})
+                return await method(
+                    url=params.get("url"), **{k: v for k, v in params.items() if k != "url"}
+                )
             else:
                 return await method(**params)
         except Exception as e:

@@ -1,4 +1,5 @@
 """ZeroToken - AI Agent browser automation MCP engine"""
+
 try:
     from importlib.metadata import version
 

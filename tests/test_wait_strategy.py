@@ -5,17 +5,9 @@ SmartWait 测试
 """
 
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-import time
+from unittest.mock import AsyncMock
 
-from zerotoken.wait_strategy import (
-    WaitCondition,
-    WaitConfig,
-    WaitForResult,
-    SmartWait,
-    WaitChain
-)
+from zerotoken.wait_strategy import WaitCondition, WaitConfig, WaitForResult, SmartWait, WaitChain
 
 
 class TestWaitCondition:
@@ -48,11 +40,7 @@ class TestWaitConfig:
 
     def test_custom_config(self):
         """测试自定义配置"""
-        config = WaitConfig(
-            timeout=10000,
-            retry_interval=200,
-            max_retries=5
-        )
+        config = WaitConfig(timeout=10000, retry_interval=200, max_retries=5)
 
         assert config.timeout == 10000
         assert config.retry_interval == 200
@@ -64,11 +52,7 @@ class TestWaitForResult:
 
     def test_create_result(self):
         """测试创建等待结果"""
-        result = WaitForResult(
-            success=True,
-            condition=WaitCondition.SELECTOR,
-            elapsed_ms=150.5
-        )
+        result = WaitForResult(success=True, condition=WaitCondition.SELECTOR, elapsed_ms=150.5)
 
         assert result.success is True
         assert result.condition == WaitCondition.SELECTOR
@@ -83,7 +67,7 @@ class TestWaitForResult:
             condition=WaitCondition.VISIBLE,
             elapsed_ms=5000,
             error="Timeout waiting for element",
-            retries=3
+            retries=3,
         )
 
         assert result.success is False
@@ -92,11 +76,7 @@ class TestWaitForResult:
 
     def test_result_to_dict(self):
         """测试转换为字典"""
-        result = WaitForResult(
-            success=True,
-            condition=WaitCondition.NETWORK_IDLE,
-            elapsed_ms=200
-        )
+        result = WaitForResult(success=True, condition=WaitCondition.NETWORK_IDLE, elapsed_ms=200)
 
         result_dict = result.to_dict()
 
@@ -139,33 +119,22 @@ class TestSmartWait:
         """测试等待选择器"""
         smart_wait = SmartWait(mock_page)
 
-        result = await smart_wait.wait_for(
-            WaitCondition.SELECTOR,
-            "#my-element"
-        )
+        result = await smart_wait.wait_for(WaitCondition.SELECTOR, "#my-element")
 
         assert result.success is True
         assert result.condition == WaitCondition.SELECTOR
-        mock_page.wait_for_selector.assert_called_once_with(
-            "#my-element",
-            timeout=30000
-        )
+        mock_page.wait_for_selector.assert_called_once_with("#my-element", timeout=30000)
 
     @pytest.mark.asyncio
     async def test_wait_for_visible(self, mock_page):
         """测试等待元素可见"""
         smart_wait = SmartWait(mock_page)
 
-        result = await smart_wait.wait_for(
-            WaitCondition.VISIBLE,
-            "#my-element"
-        )
+        result = await smart_wait.wait_for(WaitCondition.VISIBLE, "#my-element")
 
         assert result.success is True
         mock_page.wait_for_selector.assert_called_once_with(
-            "#my-element",
-            timeout=30000,
-            state="visible"
+            "#my-element", timeout=30000, state="visible"
         )
 
     @pytest.mark.asyncio
@@ -173,16 +142,11 @@ class TestSmartWait:
         """测试等待元素隐藏"""
         smart_wait = SmartWait(mock_page)
 
-        result = await smart_wait.wait_for(
-            WaitCondition.HIDDEN,
-            "#my-element"
-        )
+        result = await smart_wait.wait_for(WaitCondition.HIDDEN, "#my-element")
 
         assert result.success is True
         mock_page.wait_for_selector.assert_called_once_with(
-            "#my-element",
-            timeout=30000,
-            state="hidden"
+            "#my-element", timeout=30000, state="hidden"
         )
 
     @pytest.mark.asyncio
@@ -190,9 +154,7 @@ class TestSmartWait:
         """测试等待网络空闲"""
         smart_wait = SmartWait(mock_page)
 
-        result = await smart_wait.wait_for(
-            WaitCondition.NETWORK_IDLE
-        )
+        result = await smart_wait.wait_for(WaitCondition.NETWORK_IDLE)
 
         # 网络空闲超时是可接受的，应该总是返回成功
         assert result.success is True
@@ -203,10 +165,7 @@ class TestSmartWait:
         smart_wait = SmartWait(mock_page)
         mock_page.wait_for_function = AsyncMock()
 
-        result = await smart_wait.wait_for(
-            WaitCondition.TEXT,
-            "Welcome"
-        )
+        result = await smart_wait.wait_for(WaitCondition.TEXT, "Welcome")
 
         assert result.success is True
         mock_page.wait_for_function.assert_called_once()
@@ -217,14 +176,12 @@ class TestSmartWait:
         smart_wait = SmartWait(mock_page)
 
         result = await smart_wait.wait_for(
-            WaitCondition.FUNCTION,
-            "() => document.readyState === 'complete'"
+            WaitCondition.FUNCTION, "() => document.readyState === 'complete'"
         )
 
         assert result.success is True
         mock_page.wait_for_function.assert_called_once_with(
-            "() => document.readyState === 'complete'",
-            timeout=30000
+            "() => document.readyState === 'complete'", timeout=30000
         )
 
     @pytest.mark.asyncio
@@ -232,16 +189,9 @@ class TestSmartWait:
         """测试使用自定义超时"""
         smart_wait = SmartWait(mock_page)
 
-        await smart_wait.wait_for(
-            WaitCondition.SELECTOR,
-            "#my-element",
-            timeout=5000
-        )
+        await smart_wait.wait_for(WaitCondition.SELECTOR, "#my-element", timeout=5000)
 
-        mock_page.wait_for_selector.assert_called_once_with(
-            "#my-element",
-            timeout=5000
-        )
+        mock_page.wait_for_selector.assert_called_once_with("#my-element", timeout=5000)
 
     @pytest.mark.asyncio
     async def test_wait_history(self, mock_page):
@@ -330,11 +280,7 @@ class TestWaitChain:
     @pytest.mark.asyncio
     async def test_execute_chain(self, mock_page):
         """测试执行链"""
-        chain = (
-            WaitChain(mock_page)
-            .wait_for_selector("#button")
-            .wait_for_network_idle()
-        )
+        chain = WaitChain(mock_page).wait_for_selector("#button").wait_for_network_idle()
 
         result = await chain.execute()
 

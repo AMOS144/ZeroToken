@@ -2,7 +2,6 @@
 Test fuzzy_point - OperationRecord and trajectory fuzzy point support.
 """
 
-import pytest
 from zerotoken.controller import OperationRecord, PageState
 
 
@@ -18,7 +17,7 @@ class TestOperationRecordFuzzyPoint:
             params={},
             result={"success": True},
             page_state=ps,
-            fuzzy_point={"requires_judgment": True, "reason": "验证码需识别"}
+            fuzzy_point={"requires_judgment": True, "reason": "验证码需识别"},
         )
         d = record.to_dict()
         assert d["fuzzy_point"]["requires_judgment"] is True
@@ -36,8 +35,8 @@ class TestOperationRecordFuzzyPoint:
             fuzzy_point={
                 "requires_judgment": True,
                 "reason": "列表项需选择",
-                "hint": "根据用户意图选择第一项"
-            }
+                "hint": "根据用户意图选择第一项",
+            },
         )
         d = record.to_dict()
         assert d["fuzzy_point"]["hint"] == "根据用户意图选择第一项"
@@ -50,7 +49,7 @@ class TestOperationRecordFuzzyPoint:
             action="click",
             params={"selector": "#btn"},
             result={"success": True},
-            page_state=ps
+            page_state=ps,
         )
         d = record.to_dict()
         assert "fuzzy_point" not in d
@@ -72,17 +71,19 @@ class TestOperationRecordFuzzyPoint:
         mock_el = AsyncMock()
         mock_el.text_content = AsyncMock(return_value="test")
         controller._page.wait_for_selector = AsyncMock(return_value=mock_el)
-        controller._get_page_state = AsyncMock(
-            return_value=PageState("https://a.com", "Title")
-        )
+        controller._get_page_state = AsyncMock(return_value=PageState("https://a.com", "Title"))
         controller._take_screenshot = AsyncMock(return_value=None)
         controller._next_step = lambda: 1
 
         import asyncio
         from zerotoken.controller import BrowserController as BC
+
         real_extract = BC.extract_data.__get__(controller, BC)
-        record = asyncio.run(real_extract(
-            controller, {"fields": [{"name": "t", "selector": "h1", "type": "text"}]},
-            fuzzy_reason="验证码需识别"
-        ))
+        record = asyncio.run(
+            real_extract(
+                controller,
+                {"fields": [{"name": "t", "selector": "h1", "type": "text"}]},
+                fuzzy_reason="验证码需识别",
+            )
+        )
         assert record.fuzzy_point["reason"] == "验证码需识别"

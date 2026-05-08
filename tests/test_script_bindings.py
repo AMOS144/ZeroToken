@@ -45,4 +45,3 @@ def test_script_binding_set_get_list_delete(storage: SQLiteStorage):
 
     assert storage.script_binding_delete(key) is True
     assert storage.script_binding_get(key) is None
-

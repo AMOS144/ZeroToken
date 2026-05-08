@@ -1,4 +1,5 @@
 """ActionPipeline 单元测试"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -62,12 +63,18 @@ async def test_pipeline_step_counter_increments():
         return {}
 
     r1 = await pipeline.execute(
-        ActionType.OPEN, {}, action_fn=noop,
-        needs_selector=False, take_screenshot=False,
+        ActionType.OPEN,
+        {},
+        action_fn=noop,
+        needs_selector=False,
+        take_screenshot=False,
     )
     r2 = await pipeline.execute(
-        ActionType.CLICK, {}, action_fn=noop,
-        needs_selector=False, take_screenshot=False,
+        ActionType.CLICK,
+        {},
+        action_fn=noop,
+        needs_selector=False,
+        take_screenshot=False,
     )
     assert r1.step == 1
     assert r2.step == 2
@@ -95,16 +102,22 @@ async def test_pipeline_reset_counter():
         return {}
 
     r1 = await pipeline.execute(
-        ActionType.OPEN, {}, action_fn=noop,
-        needs_selector=False, take_screenshot=False,
+        ActionType.OPEN,
+        {},
+        action_fn=noop,
+        needs_selector=False,
+        take_screenshot=False,
     )
     assert r1.step == 1
 
     pipeline.reset_counter()
 
     r2 = await pipeline.execute(
-        ActionType.CLICK, {}, action_fn=noop,
-        needs_selector=False, take_screenshot=False,
+        ActionType.CLICK,
+        {},
+        action_fn=noop,
+        needs_selector=False,
+        take_screenshot=False,
     )
     assert r2.step == 1
 
@@ -176,8 +189,11 @@ async def test_pipeline_captures_page_state():
         return {}
 
     record = await pipeline.execute(
-        ActionType.OPEN, {"url": "https://example.com/path"},
-        action_fn=noop, needs_selector=False, take_screenshot=False,
+        ActionType.OPEN,
+        {"url": "https://example.com/path"},
+        action_fn=noop,
+        needs_selector=False,
+        take_screenshot=False,
     )
 
     assert record.page_state.url == "https://example.com/path"
@@ -209,8 +225,11 @@ async def test_pipeline_action_error_propagates():
 
     with pytest.raises(RuntimeError, match="action failed"):
         await pipeline.execute(
-            ActionType.CLICK, {},
-            action_fn=bad_action, needs_selector=False, take_screenshot=False,
+            ActionType.CLICK,
+            {},
+            action_fn=bad_action,
+            needs_selector=False,
+            take_screenshot=False,
         )
 
 

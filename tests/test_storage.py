@@ -1,8 +1,7 @@
 """Tests for zerotoken storage (ScriptStore, TrajectoryStore, SessionStore)."""
-import json
+
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -59,7 +58,9 @@ def test_trajectory_save_and_load(storage):
         {"step": 2, "action": "click", "params": {"selector": "#x"}},
     ]
     metadata = {"total_steps": 2}
-    traj_id = storage.trajectory_save(task_id=task_id, goal=goal, operations=operations, metadata=metadata)
+    traj_id = storage.trajectory_save(
+        task_id=task_id, goal=goal, operations=operations, metadata=metadata
+    )
     assert traj_id is not None
     loaded = storage.trajectory_load(traj_id)
     assert loaded is not None
@@ -81,8 +82,22 @@ def test_session_append_and_get(storage):
     task_id = "task_1"
     session_type = "replay"
     storage.session_start(session_id, task_id=task_id, session_type=session_type)
-    storage.session_append(session_id, step_index=0, action="open", selector=None, url="https://example.com", payload={"url": "https://example.com"})
-    storage.session_append(session_id, step_index=1, action="click", selector="#btn", url="https://example.com/page", payload={})
+    storage.session_append(
+        session_id,
+        step_index=0,
+        action="open",
+        selector=None,
+        url="https://example.com",
+        payload={"url": "https://example.com"},
+    )
+    storage.session_append(
+        session_id,
+        step_index=1,
+        action="click",
+        selector="#btn",
+        url="https://example.com/page",
+        payload={},
+    )
     steps = storage.session_get(session_id)
     assert len(steps) == 2
     assert steps[0]["action"] == "open"

@@ -38,6 +38,7 @@ class AdaptiveStorage(AdaptiveStore):
     def save(self, domain: str, identifier: str, fingerprint_dict: Dict[str, Any]) -> None:
         """Save or overwrite fingerprint for (domain, identifier)."""
         import time
+
         updated_at = time.time()
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
@@ -75,9 +76,7 @@ class AdaptiveStorage(AdaptiveStore):
         """AdaptiveStore interface: save fingerprint."""
         self.save(domain, identifier, fingerprint_dict)
 
-    def fingerprint_load(
-        self, domain: str, identifier: str
-    ) -> Optional[Dict[str, Any]]:
+    def fingerprint_load(self, domain: str, identifier: str) -> Optional[Dict[str, Any]]:
         """AdaptiveStore interface: load fingerprint."""
         return self.load(domain, identifier)
 

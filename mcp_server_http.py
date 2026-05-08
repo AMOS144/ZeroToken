@@ -55,6 +55,7 @@ def run(host: str | None = None, port: int | None = None):
     """Entry point for zerotoken-mcp-http console script."""
     import argparse
     import sys
+
     parser = argparse.ArgumentParser(description="ZeroToken MCP over Streamable HTTP")
     parser.add_argument("--host", default=None, help="Host to bind (default: 0.0.0.0)")
     parser.add_argument("--port", type=int, default=None, help="Port (default: 8000)")
@@ -66,6 +67,7 @@ def run(host: str | None = None, port: int | None = None):
 
     async def serve():
         import uvicorn
+
         config = uvicorn.Config(
             app,
             host=host,

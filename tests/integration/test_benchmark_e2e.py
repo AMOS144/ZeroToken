@@ -3,6 +3,7 @@
 需要真实浏览器环境，使用 @pytest.mark.integration 标记。
 运行: pytest -m integration tests/integration/
 """
+
 import os
 
 import pytest
@@ -10,9 +11,7 @@ import pytest
 from zerotoken.benchmark.analyzer import BenchmarkAnalyzer
 from zerotoken.benchmark.runner import BenchmarkRunner
 
-_SCENARIOS_DIR = os.path.join(
-    os.path.dirname(__file__), "..", "..", "benchmark_scenarios"
-)
+_SCENARIOS_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "benchmark_scenarios")
 
 
 @pytest.fixture

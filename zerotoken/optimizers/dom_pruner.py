@@ -1,4 +1,5 @@
 """DOM 剪枝：将 HTML 压缩为便于 AI 阅读的语义骨架"""
+
 from __future__ import annotations
 
 import re

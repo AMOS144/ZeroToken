@@ -1,9 +1,9 @@
 """Session 模型单元测试"""
-import pytest
 
 
 def test_pause_event():
     from zerotoken.models.session import PauseEvent, PauseReason
+
     pe = PauseEvent(
         reason=PauseReason.STEP_FAILED,
         session_id="s1",
@@ -23,16 +23,22 @@ def test_pause_event():
 
 def test_resolution():
     from zerotoken.models.session import Resolution
-    r = Resolution(type="patch_step", patch={"params": {"selector": ".new"}}, note="changed selector")
+
+    r = Resolution(
+        type="patch_step", patch={"params": {"selector": ".new"}}, note="changed selector"
+    )
     assert r.type == "patch_step"
     assert r.patch["params"]["selector"] == ".new"
 
 
 def test_runtime_state():
     from zerotoken.models.session import RuntimeState
+
     rs = RuntimeState(
-        session_id="s1", task_id="t1",
-        cursor_step_index=5, status="running",
+        session_id="s1",
+        task_id="t1",
+        cursor_step_index=5,
+        status="running",
     )
     assert rs.cursor_step_index == 5
     assert rs.status == "running"
@@ -42,13 +48,19 @@ def test_runtime_state():
 
 def test_runtime_state_json_roundtrip():
     from zerotoken.models.session import RuntimeState, PauseEvent, PauseReason
+
     rs = RuntimeState(
-        session_id="s1", task_id="t1",
-        cursor_step_index=3, status="paused",
+        session_id="s1",
+        task_id="t1",
+        cursor_step_index=3,
+        status="paused",
         pause_event=PauseEvent(
             reason=PauseReason.STEP_FAILED,
-            session_id="s1", task_id="t1", step_index=3,
-            action="browser_click", params={"selector": "#x"},
+            session_id="s1",
+            task_id="t1",
+            step_index=3,
+            action="browser_click",
+            params={"selector": "#x"},
             error="timeout",
         ),
         vars={"user": "test"},

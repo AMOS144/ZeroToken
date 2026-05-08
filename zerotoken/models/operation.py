@@ -1,4 +1,5 @@
 """浏览器操作的核心数据模型"""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -10,6 +11,7 @@ from pydantic import BaseModel, Field
 
 class ActionType(str, Enum):
     """所有支持的浏览器动作类型"""
+
     OPEN = "open"
     CLICK = "click"
     INPUT = "input"
@@ -38,6 +40,7 @@ class ActionType(str, Enum):
 
 class PageState(BaseModel):
     """页面状态快照"""
+
     url: str = ""
     title: str = ""
     tab_id: int = 0
@@ -47,6 +50,7 @@ class PageState(BaseModel):
 
 class SelectorCandidate(BaseModel):
     """备选选择器（含稳定性评分）"""
+
     type: str
     value: str
     stability_score: float = 0.0
@@ -54,6 +58,7 @@ class SelectorCandidate(BaseModel):
 
 class OperationResult(BaseModel):
     """操作执行结果"""
+
     success: bool
     data: dict[str, Any] = Field(default_factory=dict)
     error: Optional[str] = None
@@ -61,6 +66,7 @@ class OperationResult(BaseModel):
 
 class OperationRecord(BaseModel):
     """一次浏览器操作的完整记录"""
+
     step: int
     action: ActionType
     params: dict[str, Any] = Field(default_factory=dict)

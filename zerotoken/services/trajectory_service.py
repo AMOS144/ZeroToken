@@ -1,4 +1,5 @@
 """轨迹服务：录制/导出/管理 + 探索模式"""
+
 from __future__ import annotations
 
 from enum import Enum

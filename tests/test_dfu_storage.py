@@ -51,7 +51,9 @@ def test_dfu_save_load_list_delete(storage: SQLiteStorage):
 
 def test_runtime_init_get_update(storage: SQLiteStorage):
     session_id = "sess_rt_1"
-    storage.runtime_init(session_id, task_id="task_x", cursor_step_index=0, status="running", pause_event=None)
+    storage.runtime_init(
+        session_id, task_id="task_x", cursor_step_index=0, status="running", pause_event=None
+    )
 
     rt = storage.runtime_get(session_id)
     assert rt is not None
@@ -61,11 +63,12 @@ def test_runtime_init_get_update(storage: SQLiteStorage):
     assert rt["pause_event"] is None
 
     pause_event = {"kind": "dfu_pause", "step_index": 1}
-    storage.runtime_update(session_id, cursor_step_index=1, status="paused", pause_event=pause_event)
+    storage.runtime_update(
+        session_id, cursor_step_index=1, status="paused", pause_event=pause_event
+    )
 
     rt2 = storage.runtime_get(session_id)
     assert rt2 is not None
     assert rt2["cursor_step_index"] == 1
     assert rt2["status"] == "paused"
     assert rt2["pause_event"]["kind"] == "dfu_pause"
-

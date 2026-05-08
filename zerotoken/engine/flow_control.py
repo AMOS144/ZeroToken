@@ -3,6 +3,7 @@
 支持 if / loop / assign 流程控制和浏览器动作步骤。
 动作步骤失败时构建暂停结果（Step-as-Unit 模型）。
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ ActionRunner = Callable[[ScriptStep], Awaitable[OperationRecord]]
 @dataclass
 class FlowResult:
     """流程执行结果"""
+
     completed: bool = False
     paused: bool = False
     failed: bool = False

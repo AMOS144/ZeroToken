@@ -1,4 +1,5 @@
 """浏览器上下文管理：多标签页 + iframe 栈"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -12,6 +13,7 @@ from .stealth import STEALTH_LAUNCH_ARGS, STEALTH_INIT_SCRIPT, DEFAULT_STEALTH_U
 @dataclass
 class ManagedPage:
     """一个受管理的标签页，维护自身的 iframe 导航栈"""
+
     page: Page
     tab_id: int
     iframe_stack: list[Any] = field(default_factory=list)
@@ -36,7 +38,9 @@ class BrowserContextManager:
     # ---- 生命周期 ----
 
     async def start(
-        self, *, headless: bool = True,
+        self,
+        *,
+        headless: bool = True,
         viewport: dict[str, int] | None = None,
         stealth: bool = False,
     ) -> None:
@@ -45,17 +49,21 @@ class BrowserContextManager:
             return
         self._playwright = await async_playwright().start()
         launch_args = (
-            STEALTH_LAUNCH_ARGS if stealth
+            STEALTH_LAUNCH_ARGS
+            if stealth
             else ["--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage"]
         )
         self._browser = await self._playwright.chromium.launch(
-            headless=headless, args=launch_args,
+            headless=headless,
+            args=launch_args,
         )
         vp = viewport or {"width": 1920, "height": 1080}
         if stealth:
             self._context = await self._browser.new_context(
-                viewport=vp, user_agent=DEFAULT_STEALTH_USER_AGENT,
-                locale="en-US", timezone_id="America/New_York",
+                viewport=vp,
+                user_agent=DEFAULT_STEALTH_USER_AGENT,
+                locale="en-US",
+                timezone_id="America/New_York",
             )
             await self._context.add_init_script(STEALTH_INIT_SCRIPT)
         else:

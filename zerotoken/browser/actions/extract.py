@@ -1,4 +1,5 @@
 """提取类动作：get_text, get_html, screenshot, extract_data"""
+
 from __future__ import annotations
 
 import asyncio
@@ -32,13 +33,18 @@ async def get_html_action(frame: Any, element: Any, params: dict[str, Any]) -> d
 
 
 async def _playwright_screenshot(
-    frame: Any, element: Any, *, full_page: bool, timeout_s: float,
+    frame: Any,
+    element: Any,
+    *,
+    full_page: bool,
+    timeout_s: float,
 ) -> bytes:
     """用 Playwright 截图；element 截图不支持 full_page"""
     if element:
         return await asyncio.wait_for(element.screenshot(), timeout=timeout_s)
     return await asyncio.wait_for(
-        frame.screenshot(full_page=full_page), timeout=timeout_s,
+        frame.screenshot(full_page=full_page),
+        timeout=timeout_s,
     )
 
 
@@ -66,7 +72,10 @@ async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) ->
     if element or full_page:
         try:
             data = await _playwright_screenshot(
-                frame, element, full_page=full_page, timeout_s=timeout_s,
+                frame,
+                element,
+                full_page=full_page,
+                timeout_s=timeout_s,
             )
             b64 = base64.b64encode(data).decode("utf-8")
             if path:
@@ -87,8 +96,11 @@ async def screenshot_action(frame: Any, element: Any, params: dict[str, Any]) ->
         pass
 
     return {
-        "screenshot": None, "path": path, "full_page": full_page,
-        "degraded": True, "error": "screenshot failed",
+        "screenshot": None,
+        "path": path,
+        "full_page": full_page,
+        "degraded": True,
+        "error": "screenshot failed",
     }
 
 

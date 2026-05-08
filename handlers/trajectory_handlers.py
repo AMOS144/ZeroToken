@@ -1,4 +1,5 @@
 """轨迹 MCP 工具定义 & 分发"""
+
 from __future__ import annotations
 
 import json
@@ -23,61 +24,103 @@ def trajectory_tools() -> list[Tool]:
         Tool(
             name="trajectory_start",
             description="Start a new trajectory recording for a task",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Unique task identifier"},
-                "goal": {"type": "string", "description": "Natural language description of the task goal"},
-            }, required=["task_id", "goal"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Unique task identifier"},
+                    "goal": {
+                        "type": "string",
+                        "description": "Natural language description of the task goal",
+                    },
+                },
+                required=["task_id", "goal"],
+            ),
         ),
         Tool(
             name="trajectory_complete",
             description="Complete the current trajectory and get AI-ready prompt",
-            inputSchema=_obj_schema({
-                "export_for_ai": {"type": "boolean", "description": "Export in AI-optimized format", "default": True},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "export_for_ai": {
+                        "type": "boolean",
+                        "description": "Export in AI-optimized format",
+                        "default": True,
+                    },
+                }
+            ),
         ),
         Tool(
             name="trajectory_get",
             description="Get the current (in-progress) trajectory",
-            inputSchema=_obj_schema({
-                "format": {"type": "string", "description": "Output format (json | ai_prompt)", "default": "json"},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "format": {
+                        "type": "string",
+                        "description": "Output format (json | ai_prompt)",
+                        "default": "json",
+                    },
+                }
+            ),
         ),
         Tool(
             name="trajectory_list",
             description="List saved trajectories",
-            inputSchema=_obj_schema({
-                "limit": {"type": "integer", "description": "Max number of trajectories", "default": 20},
-                "since": {"type": "number", "description": "Unix timestamp filter"},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max number of trajectories",
+                        "default": 20,
+                    },
+                    "since": {"type": "number", "description": "Unix timestamp filter"},
+                }
+            ),
         ),
         Tool(
             name="trajectory_load",
             description="Load a saved trajectory by task_id",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID of the saved trajectory"},
-                "format": {"type": "string", "description": "Output format: ai_prompt | json", "default": "ai_prompt", "enum": ["ai_prompt", "json"]},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID of the saved trajectory"},
+                    "format": {
+                        "type": "string",
+                        "description": "Output format: ai_prompt | json",
+                        "default": "ai_prompt",
+                        "enum": ["ai_prompt", "json"],
+                    },
+                },
+                required=["task_id"],
+            ),
         ),
         Tool(
             name="trajectory_delete",
             description="Delete saved trajectories by task_id",
-            inputSchema=_obj_schema({
-                "task_id": {"type": "string", "description": "Task ID to delete"},
-            }, required=["task_id"]),
+            inputSchema=_obj_schema(
+                {
+                    "task_id": {"type": "string", "description": "Task ID to delete"},
+                },
+                required=["task_id"],
+            ),
         ),
         Tool(
             name="trajectory_explore_start",
             description="Enter explore mode: pause trajectory recording temporarily",
-            inputSchema=_obj_schema({
-                "reason": {"type": "string", "description": "Why entering explore mode"},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "reason": {"type": "string", "description": "Why entering explore mode"},
+                }
+            ),
         ),
         Tool(
             name="trajectory_explore_stop",
             description="Exit explore mode and resume recording. keep: none=discard all, last=keep last step, all=keep all explore steps",
-            inputSchema=_obj_schema({
-                "keep": {"type": "string", "description": "Which explore steps to keep: none / last / all (default: none)"},
-            }),
+            inputSchema=_obj_schema(
+                {
+                    "keep": {
+                        "type": "string",
+                        "description": "Which explore steps to keep: none / last / all (default: none)",
+                    },
+                }
+            ),
         ),
         Tool(
             name="trajectory_status",
@@ -88,6 +131,7 @@ def trajectory_tools() -> list[Tool]:
 
 
 # --------------- 辅助 ---------------
+
 
 def _resp(data: Any) -> list[TextContent]:
     return [TextContent(type="text", text=json.dumps(data, ensure_ascii=False, default=str))]
@@ -103,6 +147,7 @@ def _err(error: str, code: str | None = None, retryable: bool = False) -> list[T
 
 # --------------- 分发 ---------------
 
+
 async def handle_trajectory_tool(
     name: str,
     args: dict[str, Any],
@@ -112,12 +157,14 @@ async def handle_trajectory_tool(
     try:
         if name == "trajectory_start":
             traj = trajectory_svc.start_trajectory(args["task_id"], args["goal"])
-            return _resp({
-                "success": True,
-                "task_id": traj.task_id,
-                "goal": traj.goal,
-                "message": "Trajectory recording started",
-            })
+            return _resp(
+                {
+                    "success": True,
+                    "task_id": traj.task_id,
+                    "goal": traj.goal,
+                    "message": "Trajectory recording started",
+                }
+            )
 
         if name == "trajectory_complete":
             traj = trajectory_svc.complete_trajectory()
@@ -155,10 +202,13 @@ async def handle_trajectory_tool(
             task_id = args["task_id"]
             traj_data = trajectory_svc._repo.trajectory_load_by_task_id(task_id)
             if traj_data is None:
-                return _err(f"No saved trajectory for task_id: {task_id}", code="TRAJECTORY_NOT_FOUND")
+                return _err(
+                    f"No saved trajectory for task_id: {task_id}", code="TRAJECTORY_NOT_FOUND"
+                )
             fmt = args.get("format", "ai_prompt")
             if fmt == "ai_prompt":
                 from zerotoken.models.trajectory import Trajectory
+
                 t = Trajectory(task_id=traj_data["task_id"], goal=traj_data["goal"])
                 return _resp({"success": True, "ai_prompt": t.to_ai_prompt()})
             return _resp({"success": True, "trajectory": traj_data})

@@ -1,4 +1,5 @@
 """SQLiteSessionRepo + SQLiteRuntimeRepo 测试"""
+
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -7,6 +8,7 @@ import pytest
 @pytest.fixture
 def session_repo():
     from zerotoken.repository.sqlite import SQLiteSessionRepo, new_connection
+
     conn = new_connection(":memory:")
     return SQLiteSessionRepo(conn)
 
@@ -14,6 +16,7 @@ def session_repo():
 @pytest.fixture
 def runtime_repo():
     from zerotoken.repository.sqlite import SQLiteRuntimeRepo, new_connection
+
     conn = new_connection(":memory:")
     return SQLiteRuntimeRepo(conn)
 

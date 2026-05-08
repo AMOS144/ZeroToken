@@ -1,7 +1,6 @@
 """Tests for ScriptEngine param substitution and step resolution."""
-import pytest
 
-from zerotoken.engine import ScriptEngine, resolve_params
+from zerotoken.engine import resolve_params
 
 
 def test_resolve_params_replaces_placeholders():

@@ -1,4 +1,5 @@
 """SQLiteScriptRepo 健康指标 / 报废测试"""
+
 import os
 import tempfile
 

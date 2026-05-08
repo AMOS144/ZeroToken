@@ -1,14 +1,14 @@
 """TrajectoryService 单元测试（含探索模式）"""
+
 import pytest
 from unittest.mock import MagicMock
-from zerotoken.models.operation import (
-    OperationRecord, ActionType, PageState, OperationResult
-)
+from zerotoken.models.operation import OperationRecord, ActionType, PageState, OperationResult
 
 
 def _make_record(step=1, success=True):
     return OperationRecord(
-        step=step, action=ActionType.CLICK,
+        step=step,
+        action=ActionType.CLICK,
         params={"selector": "#btn"},
         result=OperationResult(success=success),
         page_state=PageState(url="https://x.com"),
@@ -17,6 +17,7 @@ def _make_record(step=1, success=True):
 
 def test_recording_mode_records():
     from zerotoken.services.trajectory_service import TrajectoryService
+
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
     svc.start_trajectory("t1", "test goal")
@@ -30,6 +31,7 @@ def test_recording_mode_records():
 def test_explore_mode_default_discards():
     """keep='none'（默认）时探索步骤全部丢弃"""
     from zerotoken.services.trajectory_service import TrajectoryService
+
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
     svc.start_trajectory("t1", "test goal")
@@ -48,6 +50,7 @@ def test_explore_mode_default_discards():
 def test_explore_mode_keep_last():
     """keep='last' 时只保留探索中最后一步到正式轨迹"""
     from zerotoken.services.trajectory_service import TrajectoryService
+
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
     svc.start_trajectory("t1", "test goal")
@@ -66,6 +69,7 @@ def test_explore_mode_keep_last():
 def test_explore_mode_keep_all():
     """keep='all' 时全部探索步骤追加到正式轨迹"""
     from zerotoken.services.trajectory_service import TrajectoryService
+
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
     svc.start_trajectory("t1", "test goal")
@@ -82,6 +86,7 @@ def test_explore_mode_keep_all():
 
 def test_explore_mode_without_trajectory_raises():
     from zerotoken.services.trajectory_service import TrajectoryService
+
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
     with pytest.raises(ValueError, match="No active trajectory"):
@@ -90,6 +95,7 @@ def test_explore_mode_without_trajectory_raises():
 
 def test_complete_trajectory():
     from zerotoken.services.trajectory_service import TrajectoryService
+
     mock_repo = MagicMock()
     mock_repo.trajectory_save = MagicMock(return_value=42)
     svc = TrajectoryService(trajectory_repo=mock_repo)
@@ -103,6 +109,7 @@ def test_complete_trajectory():
 
 def test_status():
     from zerotoken.services.trajectory_service import TrajectoryService, RecordingMode
+
     mock_repo = MagicMock()
     svc = TrajectoryService(trajectory_repo=mock_repo)
     status = svc.get_status()

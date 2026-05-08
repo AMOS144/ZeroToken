@@ -1,4 +1,5 @@
 """ZeroToken Repository Layer"""
+
 from .protocols import (
     ScriptRepo,
     TrajectoryRepo,

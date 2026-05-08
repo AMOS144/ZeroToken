@@ -1,4 +1,5 @@
 """文件操作动作测试"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -18,6 +19,7 @@ def mock_element():
 @pytest.mark.asyncio
 async def test_upload_action(mock_frame, mock_element):
     from zerotoken.browser.actions.file_ops import upload_action
+
     result = await upload_action(mock_frame, mock_element, {"path": "/tmp/test.txt"})
     assert result["uploaded"] == ["/tmp/test.txt"]
     mock_element.set_input_files.assert_awaited_once_with("/tmp/test.txt")
@@ -26,6 +28,7 @@ async def test_upload_action(mock_frame, mock_element):
 @pytest.mark.asyncio
 async def test_upload_action_multiple(mock_frame, mock_element):
     from zerotoken.browser.actions.file_ops import upload_action
+
     result = await upload_action(mock_frame, mock_element, {"path": ["/tmp/a.txt", "/tmp/b.txt"]})
     assert result["uploaded"] == ["/tmp/a.txt", "/tmp/b.txt"]
     mock_element.set_input_files.assert_awaited_once_with(["/tmp/a.txt", "/tmp/b.txt"])

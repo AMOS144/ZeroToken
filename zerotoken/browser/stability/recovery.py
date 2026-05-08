@@ -12,6 +12,7 @@ import time
 
 class ErrorType(Enum):
     """错误类型"""
+
     SELECTOR_NOT_FOUND = "selector_not_found"
     ELEMENT_NOT_VISIBLE = "element_not_visible"
     ELEMENT_NOT_INTERCEPTABLE = "element_not_interceptable"
@@ -25,6 +26,7 @@ class ErrorType(Enum):
 @dataclass
 class ErrorContext:
     """错误上下文"""
+
     error_type: ErrorType
     original_error: str
     selector: Optional[str] = None
@@ -40,13 +42,14 @@ class ErrorContext:
             "selector": self.selector,
             "action": self.action,
             "page_state": self.page_state,
-            "timestamp": self.timestamp
+            "timestamp": self.timestamp,
         }
 
 
 @dataclass
 class RecoveryResult:
     """恢复结果"""
+
     success: bool
     recovered: bool
     action_taken: str
@@ -59,7 +62,7 @@ class RecoveryResult:
             "recovered": self.recovered,
             "action_taken": self.action_taken,
             "new_selector": self.new_selector,
-            "error": self.error
+            "error": self.error,
         }
 
 
@@ -78,9 +81,7 @@ class ErrorRecovery:
         self._custom_handlers: Dict[ErrorType, Callable] = {}
 
     def register_handler(
-        self,
-        error_type: ErrorType,
-        handler: Callable[[ErrorContext], Awaitable[RecoveryResult]]
+        self, error_type: ErrorType, handler: Callable[[ErrorContext], Awaitable[RecoveryResult]]
     ) -> None:
         """注册自定义错误处理器"""
         self._custom_handlers[error_type] = handler
@@ -112,10 +113,7 @@ class ErrorRecovery:
         return ErrorType.UNKNOWN
 
     async def handle_error(
-        self,
-        error: Exception,
-        selector: Optional[str] = None,
-        action: Optional[str] = None
+        self, error: Exception, selector: Optional[str] = None, action: Optional[str] = None
     ) -> RecoveryResult:
         """
         处理错误，尝试恢复
@@ -135,7 +133,7 @@ class ErrorRecovery:
             selector=selector,
             action=action,
             page_state=await self._get_page_state(),
-            timestamp=time.time()
+            timestamp=time.time(),
         )
 
         # 尝试自定义处理器
@@ -146,9 +144,7 @@ class ErrorRecovery:
                 return result
             except Exception as e:
                 return RecoveryResult(
-                    success=False,
-                    recovered=False,
-                    action_taken=f"Custom handler failed: {str(e)}"
+                    success=False, recovered=False, action_taken=f"Custom handler failed: {str(e)}"
                 )
 
         # 使用内置恢复策略
@@ -157,9 +153,7 @@ class ErrorRecovery:
         return result
 
     async def _builtin_recovery(
-        self,
-        error_type: ErrorType,
-        context: ErrorContext
+        self, error_type: ErrorType, context: ErrorContext
     ) -> RecoveryResult:
         """内置恢复策略"""
 
@@ -185,7 +179,7 @@ class ErrorRecovery:
             return RecoveryResult(
                 success=False,
                 recovered=False,
-                action_taken="No recovery strategy for this error type"
+                action_taken="No recovery strategy for this error type",
             )
 
     async def _handle_selector_not_found(self, context: ErrorContext) -> RecoveryResult:
@@ -201,7 +195,7 @@ class ErrorRecovery:
                     success=True,
                     recovered=True,
                     action_taken=f"Tried selector variants, found: {variant}",
-                    new_selector=variant
+                    new_selector=variant,
                 )
             except:
                 continue
@@ -217,7 +211,7 @@ class ErrorRecovery:
                             success=True,
                             recovered=True,
                             action_taken="Found element in iframe",
-                            new_selector=selector
+                            new_selector=selector,
                         )
                     except:
                         continue
@@ -230,13 +224,13 @@ class ErrorRecovery:
             return RecoveryResult(
                 success=False,
                 recovered=False,
-                action_taken=f"Page URL changed from {context.page_state.get('url')} to {current_url}"
+                action_taken=f"Page URL changed from {context.page_state.get('url')} to {current_url}",
             )
 
         return RecoveryResult(
             success=False,
             recovered=False,
-            action_taken=f"Selector not found: {selector}. Tried {len(variants)} variants."
+            action_taken=f"Selector not found: {selector}. Tried {len(variants)} variants.",
         )
 
     async def _handle_element_not_visible(self, context: ErrorContext) -> RecoveryResult:
@@ -248,9 +242,7 @@ class ErrorRecovery:
             await self.page.locator(selector).scroll_into_view_if_needed()
             await asyncio.sleep(0.3)
             return RecoveryResult(
-                success=True,
-                recovered=True,
-                action_taken="Scrolled element into view"
+                success=True, recovered=True, action_taken="Scrolled element into view"
             )
         except:
             pass
@@ -267,7 +259,7 @@ class ErrorRecovery:
                 return RecoveryResult(
                     success=True,
                     recovered=True,
-                    action_taken=f"Clicked element at position ({x}, {y})"
+                    action_taken=f"Clicked element at position ({x}, {y})",
                 )
         except:
             pass
@@ -288,15 +280,13 @@ class ErrorRecovery:
                 return RecoveryResult(
                     success=False,
                     recovered=False,
-                    action_taken=f"Element blocked by overlay: {overlay}"
+                    action_taken=f"Element blocked by overlay: {overlay}",
                 )
         except:
             pass
 
         return RecoveryResult(
-            success=False,
-            recovered=False,
-            action_taken="Element not visible, could not recover"
+            success=False, recovered=False, action_taken="Element not visible, could not recover"
         )
 
     async def _handle_element_not_interceptable(self, context: ErrorContext) -> RecoveryResult:
@@ -307,9 +297,7 @@ class ErrorRecovery:
         try:
             await self.page.wait_for_selector(selector, state="stable", timeout=5000)
             return RecoveryResult(
-                success=True,
-                recovered=True,
-                action_taken="Waited for element to be stable"
+                success=True, recovered=True, action_taken="Waited for element to be stable"
             )
         except:
             pass
@@ -321,17 +309,13 @@ class ErrorRecovery:
                 if (el) el.click();
             }}""")
             return RecoveryResult(
-                success=True,
-                recovered=True,
-                action_taken="Used JavaScript click"
+                success=True, recovered=True, action_taken="Used JavaScript click"
             )
         except:
             pass
 
         return RecoveryResult(
-            success=False,
-            recovered=False,
-            action_taken="Could not make element interceptable"
+            success=False, recovered=False, action_taken="Could not make element interceptable"
         )
 
     async def _handle_navigation_timeout(self, context: ErrorContext) -> RecoveryResult:
@@ -343,15 +327,13 @@ class ErrorRecovery:
             return RecoveryResult(
                 success=True,
                 recovered=True,
-                action_taken="Navigation may have completed, waited for network idle"
+                action_taken="Navigation may have completed, waited for network idle",
             )
         except:
             pass
 
         return RecoveryResult(
-            success=False,
-            recovered=False,
-            action_taken="Navigation timeout, page may be stuck"
+            success=False, recovered=False, action_taken="Navigation timeout, page may be stuck"
         )
 
     async def _handle_network_error(self, context: ErrorContext) -> RecoveryResult:
@@ -359,9 +341,7 @@ class ErrorRecovery:
         # 策略 1: 等待后重试
         await asyncio.sleep(2)
         return RecoveryResult(
-            success=True,
-            recovered=True,
-            action_taken="Waited 2 seconds after network error"
+            success=True, recovered=True, action_taken="Waited 2 seconds after network error"
         )
 
     async def _handle_popup_blocked(self, context: ErrorContext) -> RecoveryResult:
@@ -371,15 +351,11 @@ class ErrorRecovery:
             async with self.page.expect_popup(timeout=3000) as popup_info:
                 popup = await popup_info.value
                 return RecoveryResult(
-                    success=True,
-                    recovered=True,
-                    action_taken=f"Popup opened: {popup.url}"
+                    success=True, recovered=True, action_taken=f"Popup opened: {popup.url}"
                 )
         except:
             return RecoveryResult(
-                success=False,
-                recovered=False,
-                action_taken="Could not handle popup"
+                success=False, recovered=False, action_taken="Could not handle popup"
             )
 
     def _generate_selector_variants(self, selector: str) -> List[str]:
@@ -420,17 +396,14 @@ class ErrorRecovery:
             return {
                 "url": self.page.url,
                 "title": await self.page.title(),
-                "ready_state": await self.page.evaluate("document.readyState")
+                "ready_state": await self.page.evaluate("document.readyState"),
             }
         except:
             return {}
 
     def _record_recovery(self, context: ErrorContext, result: RecoveryResult) -> None:
         """记录恢复尝试"""
-        self._recovery_history.append({
-            "context": context.to_dict(),
-            "result": result.to_dict()
-        })
+        self._recovery_history.append({"context": context.to_dict(), "result": result.to_dict()})
 
     def get_recovery_history(self) -> List[Dict[str, Any]]:
         """获取恢复历史"""
@@ -449,7 +422,7 @@ class RetryWrapper:
         max_retries: int = 3,
         base_delay: float = 1.0,
         max_delay: float = 10.0,
-        exponential: bool = True
+        exponential: bool = True,
     ):
         self.max_retries = max_retries
         self.base_delay = base_delay
@@ -457,13 +430,7 @@ class RetryWrapper:
         self.exponential = exponential
         self._retry_history: List[Dict[str, Any]] = []
 
-    async def execute(
-        self,
-        func: Callable,
-        *args,
-        description: str = "",
-        **kwargs
-    ) -> Any:
+    async def execute(self, func: Callable, *args, description: str = "", **kwargs) -> Any:
         """
         执行带重试的函数
 
@@ -491,17 +458,15 @@ class RetryWrapper:
                     await asyncio.sleep(delay)
 
         # 所有重试失败
-        self._retry_history.append({
-            "description": description,
-            "attempts": retries,
-            "last_error": str(last_error)
-        })
+        self._retry_history.append(
+            {"description": description, "attempts": retries, "last_error": str(last_error)}
+        )
         raise last_error
 
     def _calculate_delay(self, attempt: int) -> float:
         """计算延迟时间"""
         if self.exponential:
-            delay = self.base_delay * (2 ** attempt)
+            delay = self.base_delay * (2**attempt)
         else:
             delay = self.base_delay
 

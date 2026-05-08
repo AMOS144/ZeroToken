@@ -4,6 +4,7 @@
 输出 JSONL 文件，按 session（进程生命周期）分文件。
 通过 ZEROTOKEN_BENCHMARK 环境变量控制开关。
 """
+
 from __future__ import annotations
 
 import atexit
@@ -92,7 +93,9 @@ class BenchmarkRecorder:
 
         raw_texts = []
         for item in result:
-            text = getattr(item, "text", None) or (item.get("text") if isinstance(item, dict) else None)
+            text = getattr(item, "text", None) or (
+                item.get("text") if isinstance(item, dict) else None
+            )
             if text:
                 raw_texts.append(text)
 

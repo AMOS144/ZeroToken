@@ -86,7 +86,9 @@ async def test_pause_on_dfu_then_resume_human_done_advances(storage: SQLiteStora
             {"action": "browser_click", "params": {"selector": "#after"}},
         ],
     }
-    storage.script_save(script["task_id"], goal=script["goal"], steps=script["steps"], params_schema={})
+    storage.script_save(
+        script["task_id"], goal=script["goal"], steps=script["steps"], params_schema={}
+    )
 
     controller = MockController()
     engine = ScriptEngine(vars_map={})
@@ -104,7 +106,9 @@ async def test_pause_on_dfu_then_resume_human_done_advances(storage: SQLiteStora
     assert rt["cursor_step_index"] == 1
 
     # Resume with human_done should advance to next step (H1)
-    res2 = await engine.run_script_resume(session_id, {"type": "human_done", "note": "done"}, controller, storage)
+    res2 = await engine.run_script_resume(
+        session_id, {"type": "human_done", "note": "done"}, controller, storage
+    )
     assert res2["success"] is True
     assert res2["status"] == "success"
 
@@ -128,7 +132,9 @@ async def test_resume_patch_step_retries_current_step_with_patch(storage: SQLite
             {"action": "browser_click", "params": {"selector": "#old"}},
         ],
     }
-    storage.script_save(script["task_id"], goal=script["goal"], steps=script["steps"], params_schema={})
+    storage.script_save(
+        script["task_id"], goal=script["goal"], steps=script["steps"], params_schema={}
+    )
 
     # Pause on the old selector
     storage.dfu_save(
@@ -166,10 +172,15 @@ async def test_resume_vars_persist_and_substitute_placeholders(storage: SQLiteSt
         "steps": [
             {"action": "browser_open", "params": {"url": "https://example.com"}},
             {"action": "browser_click", "params": {"selector": "#need_comment"}},
-            {"action": "browser_input", "params": {"selector": "#comment", "text": "{{comment_text}}"}},
+            {
+                "action": "browser_input",
+                "params": {"selector": "#comment", "text": "{{comment_text}}"},
+            },
         ],
     }
-    storage.script_save(script["task_id"], goal=script["goal"], steps=script["steps"], params_schema={})
+    storage.script_save(
+        script["task_id"], goal=script["goal"], steps=script["steps"], params_schema={}
+    )
 
     storage.dfu_save(
         "exec_point_comment",
@@ -200,4 +211,3 @@ async def test_resume_vars_persist_and_substitute_placeholders(storage: SQLiteSt
     rt = storage.runtime_get(session_id)
     assert rt is not None
     assert rt["vars"]["comment_text"] == "hello world"
-

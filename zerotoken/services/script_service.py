@@ -1,4 +1,5 @@
 """脚本服务：脚本管理/执行/绑定（含 ScriptEngineV2 执行与恢复）"""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -14,23 +15,30 @@ class ScriptService:
 
     _ABANDONED_PAUSED_TTL_HOURS = 24
 
-    def __init__(self, script_repo: Any, trajectory_repo: Any,
-                 session_repo: Any, runtime_repo: Any, binding_repo: Any):
+    def __init__(
+        self,
+        script_repo: Any,
+        trajectory_repo: Any,
+        session_repo: Any,
+        runtime_repo: Any,
+        binding_repo: Any,
+    ):
         self._scripts = script_repo
         self._trajectories = trajectory_repo
         self._sessions = session_repo
         self._runtime = runtime_repo
         self._bindings = binding_repo
 
-    def script_save(self, task_id: str, goal: str,
-                    steps: list[dict[str, Any]], **kw: Any) -> None:
+    def script_save(self, task_id: str, goal: str, steps: list[dict[str, Any]], **kw: Any) -> None:
         self._scripts.script_save(task_id, goal=goal, steps=steps, **kw)
 
     def script_load(self, task_id: str) -> dict[str, Any] | None:
         return self._scripts.script_load(task_id)
 
     def script_list(
-        self, limit: int = 100, status: str = "active",
+        self,
+        limit: int = 100,
+        status: str = "active",
     ) -> list[dict[str, Any]]:
         return self._scripts.script_list(limit=limit, status=status)
 
@@ -52,8 +60,7 @@ class ScriptService:
     def _settle_abandoned_sessions(self, task_id: str) -> int:
         """将超过 TTL 的 paused session 标记为 aborted，计入失败。返回处理数量。"""
         cutoff = (
-            datetime.now(timezone.utc)
-            - timedelta(hours=self._ABANDONED_PAUSED_TTL_HOURS)
+            datetime.now(timezone.utc) - timedelta(hours=self._ABANDONED_PAUSED_TTL_HOURS)
         ).isoformat()
         stale = self._runtime.find_paused_before(task_id, cutoff)
         for s in stale:
@@ -68,18 +75,19 @@ class ScriptService:
     def trajectory_to_script(self, task_id: str, **kw: Any) -> str:
         """从轨迹生成脚本（复用现有 generator 逻辑）"""
         from zerotoken.engine.script_generator import save_script_from_trajectory
+
         traj_data = self.trajectory_load(task_id)
         if traj_data is None:
             raise ValueError(f"No trajectory for task_id: {task_id}")
         return save_script_from_trajectory(
-            traj_data, self._scripts,
+            traj_data,
+            self._scripts,
             task_id=kw.get("script_task_id", task_id),
             prepend_init=kw.get("prepend_init", True),
             stealth=kw.get("stealth", False),
         )
 
-    def binding_set(self, binding_key: str, script_task_id: str,
-                    **kw: Any) -> None:
+    def binding_set(self, binding_key: str, script_task_id: str, **kw: Any) -> None:
         self._bindings.binding_set(binding_key, script_task_id=script_task_id, **kw)
 
     def binding_get(self, binding_key: str) -> dict[str, Any] | None:
@@ -98,8 +106,11 @@ class ScriptService:
         return self._sessions.session_get(session_id)
 
     async def run_script(
-        self, task_id: str, browser_svc: Any,
-        *, vars: dict[str, Any] | None = None,
+        self,
+        task_id: str,
+        browser_svc: Any,
+        *,
+        vars: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """启动脚本执行：检查 deprecated，清理遗弃 paused，执行后更新统计"""
         health = self._scripts.health(task_id)
@@ -119,7 +130,8 @@ class ScriptService:
             return {"status": "error", "error": f"Script not found: {task_id}"}
 
         script = Script(
-            task_id=raw["task_id"], goal=raw.get("goal", ""),
+            task_id=raw["task_id"],
+            goal=raw.get("goal", ""),
             steps=[ScriptStep(**s) for s in raw.get("steps", [])],
             params_schema=raw.get("params_schema", {}),
         )
@@ -129,7 +141,9 @@ class ScriptService:
         # 终态时更新统计（paused 是中间态，不计入）
         if result.get("status") in ("completed", "failed", "aborted"):
             updated = self._scripts.record_run_result(
-                task_id, result["status"], result.get("session_id", ""),
+                task_id,
+                result["status"],
+                result.get("session_id", ""),
             )
             # 若本次执行刚把 active 升级为 warning，在响应中带 hint
             was_active = bool(health and health.get("status") == "active")
@@ -145,7 +159,9 @@ class ScriptService:
         return result
 
     async def resume_script(
-        self, session_id: str, resolution: Resolution,
+        self,
+        session_id: str,
+        resolution: Resolution,
         browser_svc: Any,
     ) -> dict[str, Any]:
         """恢复暂停的脚本，终态时更新统计"""
@@ -157,7 +173,8 @@ class ScriptService:
         if raw is None:
             return {"status": "error", "error": f"Script not found: {task_id}"}
         script = Script(
-            task_id=raw["task_id"], goal=raw.get("goal", ""),
+            task_id=raw["task_id"],
+            goal=raw.get("goal", ""),
             steps=[ScriptStep(**s) for s in raw.get("steps", [])],
         )
         engine = ScriptEngineV2(browser_svc, self._sessions, self._runtime)
@@ -165,13 +182,18 @@ class ScriptService:
 
         if result.get("status") in ("completed", "failed", "aborted"):
             self._scripts.record_run_result(
-                task_id, result["status"], session_id,
+                task_id,
+                result["status"],
+                session_id,
             )
         return result
 
     async def run_script_by_binding(
-        self, binding_key: str, browser_svc: Any,
-        *, vars: dict[str, Any] | None = None,
+        self,
+        binding_key: str,
+        browser_svc: Any,
+        *,
+        vars: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """按绑定 key 执行脚本（合并 default_vars + 传入 vars）"""
         binding = self._bindings.binding_get(binding_key)

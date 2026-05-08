@@ -1,4 +1,5 @@
 """版本化数据库迁移"""
+
 from __future__ import annotations
 
 import sqlite3

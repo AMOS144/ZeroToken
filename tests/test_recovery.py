@@ -6,15 +6,9 @@ ErrorRecovery 测试
 
 import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
-from zerotoken.recovery import (
-    ErrorType,
-    ErrorContext,
-    RecoveryResult,
-    ErrorRecovery,
-    RetryWrapper
-)
+from zerotoken.recovery import ErrorType, ErrorContext, RecoveryResult, ErrorRecovery, RetryWrapper
 
 
 class TestErrorType:
@@ -41,7 +35,7 @@ class TestErrorContext:
             error_type=ErrorType.SELECTOR_NOT_FOUND,
             original_error="Element not found",
             selector="#my-element",
-            action="click"
+            action="click",
         )
 
         assert context.error_type == ErrorType.SELECTOR_NOT_FOUND
@@ -54,7 +48,7 @@ class TestErrorContext:
         context = ErrorContext(
             error_type=ErrorType.ELEMENT_NOT_VISIBLE,
             original_error="Element is hidden",
-            selector="#hidden"
+            selector="#hidden",
         )
 
         result = context.to_dict()
@@ -70,9 +64,7 @@ class TestRecoveryResult:
     def test_create_success_result(self):
         """测试创建成功结果"""
         result = RecoveryResult(
-            success=True,
-            recovered=True,
-            action_taken="Used alternative selector"
+            success=True, recovered=True, action_taken="Used alternative selector"
         )
 
         assert result.success is True
@@ -82,9 +74,7 @@ class TestRecoveryResult:
     def test_create_failure_result(self):
         """测试创建失败结果"""
         result = RecoveryResult(
-            success=False,
-            recovered=False,
-            action_taken="No recovery strategy available"
+            success=False, recovered=False, action_taken="No recovery strategy available"
         )
 
         assert result.success is False
@@ -96,7 +86,7 @@ class TestRecoveryResult:
             success=True,
             recovered=True,
             action_taken="Found alternative selector",
-            new_selector="#alternative-btn"
+            new_selector="#alternative-btn",
         )
 
         assert result.new_selector == "#alternative-btn"
@@ -107,7 +97,7 @@ class TestRecoveryResult:
             success=True,
             recovered=True,
             action_taken="Retried with success",
-            new_selector="#new-selector"
+            new_selector="#new-selector",
         )
 
         result_dict = result.to_dict()
@@ -200,11 +190,7 @@ class TestErrorRecovery:
         recovery = ErrorRecovery(mock_page, mock_controller)
 
         error = Exception("Element #nonexistent not found")
-        result = await recovery.handle_error(
-            error,
-            selector="#nonexistent",
-            action="click"
-        )
+        result = await recovery.handle_error(error, selector="#nonexistent", action="click")
 
         # 应该尝试恢复策略
         assert result.success is False or result.recovered is True
@@ -216,20 +202,13 @@ class TestErrorRecovery:
 
         # 模拟元素存在但不可见
         mock_element = AsyncMock()
-        mock_element.bounding_box = AsyncMock(return_value={
-            "x": 100,
-            "y": 100,
-            "width": 50,
-            "height": 30
-        })
+        mock_element.bounding_box = AsyncMock(
+            return_value={"x": 100, "y": 100, "width": 50, "height": 30}
+        )
         mock_page.wait_for_selector = AsyncMock(return_value=mock_element)
 
         error = Exception("Element is not visible")
-        result = await recovery.handle_error(
-            error,
-            selector="#hidden-element",
-            action="click"
-        )
+        result = await recovery.handle_error(error, selector="#hidden-element", action="click")
 
         # 应该尝试滚动或点击位置
         assert result is not None
@@ -270,8 +249,7 @@ class TestErrorRecovery:
         recovery = ErrorRecovery(mock_page, mock_controller)
 
         context = ErrorContext(
-            error_type=ErrorType.SELECTOR_NOT_FOUND,
-            original_error="Element not found"
+            error_type=ErrorType.SELECTOR_NOT_FOUND, original_error="Element not found"
         )
         result = RecoveryResult(success=False, recovered=False, action_taken="Failed")
 
@@ -295,12 +273,7 @@ class TestRetryWrapper:
 
     def test_create_with_custom_params(self):
         """测试使用自定义参数创建"""
-        wrapper = RetryWrapper(
-            max_retries=5,
-            base_delay=0.5,
-            max_delay=5.0,
-            exponential=False
-        )
+        wrapper = RetryWrapper(max_retries=5, base_delay=0.5, max_delay=5.0, exponential=False)
 
         assert wrapper.max_retries == 5
         assert wrapper.base_delay == 0.5

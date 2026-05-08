@@ -1,4 +1,5 @@
 """SQLite 存储实现 -- 每个 Repo 只管自己的表"""
+
 from __future__ import annotations
 
 import json
@@ -535,9 +536,7 @@ class SQLiteRuntimeRepo:
         )
         self.conn.commit()
 
-    def find_paused_before(
-        self, task_id: str, cutoff_iso: str
-    ) -> list[dict[str, Any]]:
+    def find_paused_before(self, task_id: str, cutoff_iso: str) -> list[dict[str, Any]]:
         """返回指定 task_id 下 status='paused' 且 updated_at < cutoff_iso 的 session。"""
         rows = self.conn.execute(
             """SELECT session_id, task_id, updated_at FROM session_runtime
@@ -651,8 +650,6 @@ class SQLiteBindingRepo:
         ]
 
     def binding_delete(self, binding_key: str) -> bool:
-        cur = self.conn.execute(
-            "DELETE FROM script_bindings WHERE binding_key=?", (binding_key,)
-        )
+        cur = self.conn.execute("DELETE FROM script_bindings WHERE binding_key=?", (binding_key,))
         self.conn.commit()
         return cur.rowcount > 0

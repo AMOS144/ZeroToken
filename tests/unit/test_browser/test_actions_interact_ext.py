@@ -1,4 +1,5 @@
 """扩展交互动作测试：hover, right_click, double_click, drag_drop, scroll, keyboard, type_text"""
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -23,6 +24,7 @@ def mock_element():
 @pytest.mark.asyncio
 async def test_hover_action(mock_frame, mock_element):
     from zerotoken.browser.actions.interact import hover_action
+
     result = await hover_action(mock_frame, mock_element, {})
     mock_element.hover.assert_awaited_once()
     assert result == {}
@@ -31,6 +33,7 @@ async def test_hover_action(mock_frame, mock_element):
 @pytest.mark.asyncio
 async def test_right_click_action(mock_frame, mock_element):
     from zerotoken.browser.actions.interact import right_click_action
+
     result = await right_click_action(mock_frame, mock_element, {})
     mock_element.click.assert_awaited_once_with(button="right")
     assert result == {}
@@ -39,6 +42,7 @@ async def test_right_click_action(mock_frame, mock_element):
 @pytest.mark.asyncio
 async def test_double_click_action(mock_frame, mock_element):
     from zerotoken.browser.actions.interact import double_click_action
+
     result = await double_click_action(mock_frame, mock_element, {})
     mock_element.dblclick.assert_awaited_once()
     assert result == {}
