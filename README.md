@@ -3,6 +3,10 @@
 <!-- mcp-name: io.github.AMOS144/zerotoken -->
 
 [![CI](https://github.com/AMOS144/zerotoken/actions/workflows/ci.yml/badge.svg)](https://github.com/AMOS144/zerotoken/actions/workflows/ci.yml)
+[![PyPI version](https://img.shields.io/pypi/v/zerotoken.svg)](https://pypi.org/project/zerotoken/)
+[![Python versions](https://img.shields.io/pypi/pyversions/zerotoken.svg)](https://pypi.org/project/zerotoken/)
+[![Downloads](https://static.pepy.tech/badge/zerotoken/month)](https://pepy.tech/project/zerotoken)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **ZeroToken - Record once, automate forever.**
 
