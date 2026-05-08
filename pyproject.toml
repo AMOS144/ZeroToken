@@ -15,7 +15,6 @@ dependencies = [
     "pydantic>=2.5.0",
     "apscheduler>=3.10.4",
     "mcp[cli]>=1.0.0",
-    "build>=1.4.0",
     "pillow>=12.2.0",
 ]
 
@@ -29,6 +28,8 @@ test = [
 [dependency-groups]
 dev = [
     "ruff>=0.15.10",
+    "build>=1.4.0",
+    "twine>=5.0.0",
 ]
 test = [
     "pytest>=7.0",
